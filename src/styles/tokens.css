@@ -1,0 +1,289 @@
+/**
+ * tokens.css — Single source of truth for all design tokens.
+ *
+ * Rules:
+ * - No hardcoded hex values anywhere in the codebase except this file.
+ * - No hardcoded pixel sizes for typography except this file.
+ * - Every value here has a documented semantic role.
+ *
+ * Sections:
+ *   1. Colour palette (raw named colours)
+ *   2. Semantic background roles
+ *   3. Semantic text roles
+ *   4. Semantic border roles
+ *   5. Interactive / accent roles
+ *   6. Rarity system
+ *   7. Typography scale
+ *   8. Spacing scale
+ *   9. Z-index scale
+ *  10. Border radius scale
+ *  11. Transition durations
+ *  12. Breakpoints (as custom media — for reference; use class-based approach in JS)
+ */
+
+:root {
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     1. COLOUR PALETTE — named raw colours
+     Never use these directly in component CSS. Use semantic roles below.
+     ═══════════════════════════════════════════════════════════════════════════ */
+
+  /* Neutrals */
+  --color-void:        #000000;
+  --color-slate:       #524C52;
+  --color-stone:       #83758B;
+  --color-ash:         #ACAABD;
+  --color-parchment:   #E1E5D8;
+
+  /* Warm — gold, fire, danger */
+  --color-gold:        #E6E69C;
+  --color-amber:       #DEA541;
+  --color-ember:       #C56129;
+  --color-crimson:     #943820;
+  --color-ash-red:     #411810;
+
+  /* Nature — healing, poison */
+  --color-leaf:        #7BBA73;
+  --color-forest:      #39996A;
+  --color-teal:        #29655A;
+
+  /* Water — lightning, ice */
+  --color-sky:         #6AB2C5;
+  --color-azure:       #4181C5;
+  --color-deep:        #316D94;
+
+  /* Arcane — keystones, legendary, magic */
+  --color-midnight:    #293C8B;
+  --color-void-purple: #411883;
+  --color-arcane:      #7B34BD;
+  --color-glow:        #BD59DE;
+  --color-lilac:       #E69DE6;
+
+  /* Danger — death, corruption */
+  --color-rose:        #DE599C;
+  --color-blood:       #B41C39;
+  --color-dark-blood:  #81090A;
+
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     2. SEMANTIC BACKGROUND ROLES
+     Layer 0–5: every surface sits one layer above its parent. Never skip.
+     ═══════════════════════════════════════════════════════════════════════════ */
+
+  --bg-void:     #000000;            /* Layer 0 — page fill, never has content */
+  --bg-base:     #0a0810;            /* Layer 1 — app shell, outermost container */
+  --bg-surface:  #13101a;            /* Layer 2 — sections, main content areas */
+  --bg-raised:   #1e1928;            /* Layer 3 — cards, panels, interactive elements */
+  --bg-float:    #2a2238;            /* Layer 4 — tooltips, popovers, dropdowns */
+  --bg-overlay:  rgba(0,0,0,0.88);  /* Layer 5 — full-screen modal dim */
+  --bg-input:    #1a1525;            /* Input fields */
+
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     3. SEMANTIC TEXT ROLES
+     ═══════════════════════════════════════════════════════════════════════════ */
+
+  --text-primary:   #E1E5D8;  /* All body text, headings */
+  --text-secondary: #ACAABD;  /* Labels, captions, secondary info */
+  --text-muted:     #83758B;  /* Hints, placeholder text */
+  --text-dim:       #524C52;  /* Disabled, dead states */
+  --text-accent:    #DEA541;  /* Gold values, currency */
+  --text-danger:    #943820;  /* Warnings, errors */
+  --text-heal:      #39996A;  /* Healing values, positive effects */
+
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     4. SEMANTIC BORDER ROLES
+     Borders communicate state — they are not decoration.
+     ═══════════════════════════════════════════════════════════════════════════ */
+
+  --border-subtle:     rgba(172,170,189,0.10);  /* Resting state */
+  --border-default:    rgba(172,170,189,0.18);  /* Standard panel borders */
+  --border-active:     #7B34BD;                 /* Selected, focused, active */
+  --border-hover:      rgba(123,52,189,0.45);   /* Hover state */
+  --border-danger:     #943820;                 /* Error, warning state */
+  --border-success:    #39996A;                 /* Success, heal state */
+  --border-legendary:  #DEA541;                 /* Legendary rarity */
+
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     5. INTERACTIVE / ACCENT ROLES
+     ═══════════════════════════════════════════════════════════════════════════ */
+
+  --accent-primary:    #7B34BD;  /* Primary interactive colour */
+  --accent-gold:       #DEA541;  /* Currency, rewards */
+  --accent-fire:       #C56129;  /* Fire/burn effects */
+  --accent-nature:     #39996A;  /* Healing, poison */
+  --accent-lightning:  #4181C5;  /* Lightning, arcane */
+  --accent-glow:       #BD59DE;  /* Legendary, active glow */
+  --accent-danger:     #B41C39;  /* Death, critical fail */
+
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     6. RARITY SYSTEM
+     Four tiers: Common → Rare → Epic → Legendary
+     Each tier defines: colour, border, glow, accent-bar height, badge icon
+     ═══════════════════════════════════════════════════════════════════════════ */
+
+  /* Common */
+  --rarity-common-color:   #83758B;
+  --rarity-common-border:  rgba(131,117,139,0.35);
+  --rarity-common-glow:    none;
+  --rarity-common-bar-h:   3px;
+  --rarity-common-icon:    "▪";
+  --rarity-common-name:    var(--text-secondary);
+
+  /* Rare (was Uncommon) */
+  --rarity-rare-color:     #4181C5;
+  --rarity-rare-border:    rgba(65,129,197,0.55);
+  --rarity-rare-glow:      none;
+  --rarity-rare-bar-h:     4px;
+  --rarity-rare-icon:      "◆";
+  --rarity-rare-name:      #4181C5;
+
+  /* Epic (was Rare) */
+  --rarity-epic-color:     #7B34BD;
+  --rarity-epic-border:    rgba(123,52,189,0.65);
+  --rarity-epic-glow:      0 0 6px rgba(123,52,189,0.20);
+  --rarity-epic-bar-h:     5px;
+  --rarity-epic-icon:      "✦";
+  --rarity-epic-name:      #BD59DE;
+
+  /* Legendary */
+  --rarity-legendary-color:   #DEA541;
+  --rarity-legendary-border:  rgba(222,165,65,0.60);
+  --rarity-legendary-glow:    0 0 12px rgba(222,165,65,0.30);
+  --rarity-legendary-bar-h:   6px;
+  --rarity-legendary-icon:    "♛";
+  --rarity-legendary-name:    #E6E69C;
+
+  /* Build category accent colours (for Build Fingerprint bars) */
+  --cat-damage:     #C56129;
+  --cat-critical:   #943820;
+  --cat-lifesteal:  #39996A;
+  --cat-defense:    #316D94;
+  --cat-poison:     #29655A;
+  --cat-burn:       #DEA541;
+  --cat-lightning:  #4181C5;
+  --cat-speed:      #BD59DE;
+
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     7. TYPOGRAPHY SCALE
+     Seven levels. All in rem (16px base). Never use px for font sizes in components.
+     Always add font-variant-numeric: tabular-nums to numerical stat displays.
+     ═══════════════════════════════════════════════════════════════════════════ */
+
+  /* Font family */
+  --font-mono: 'JetBrains Mono', 'Fira Mono', 'Cascadia Code', 'Consolas', 'Courier New', monospace;
+
+  /* Scale */
+  --text-display:  2rem;       /* 32px — floor cleared, game over title */
+  --text-title:    1.375rem;   /* 22px — screen titles */
+  --text-heading:  1rem;       /* 16px — section headers, panel titles */
+  --text-body:     0.8125rem;  /* 13px — normal UI text, descriptions */
+  --text-label:    0.6875rem;  /* 11px — labels, keyboard hints, small badges */
+  --text-caption:  0.5625rem;  /* 9px  — timestamps, fine print, version numbers */
+  --text-stat:     1.125rem;   /* 18px — numbers in stat panels, HP values, DPS */
+
+  /* Weights */
+  --weight-display:  800;
+  --weight-title:    700;
+  --weight-heading:  700;
+  --weight-body:     400;
+  --weight-label:    600;
+  --weight-caption:  400;
+  --weight-stat:     700;
+
+  /* Line heights */
+  --lh-display:  1.15;
+  --lh-title:    1.2;
+  --lh-heading:  1.2;
+  --lh-body:     1.5;
+  --lh-label:    1.2;
+  --lh-caption:  1.2;
+  --lh-stat:     1.0;
+
+  /* Letter spacing */
+  --ls-display:  -0.02em;
+  --ls-title:    -0.01em;
+  --ls-heading:  -0.01em;
+  --ls-body:      0em;
+  --ls-label:     0.06em;
+  --ls-caption:   0.06em;
+  --ls-stat:     -0.01em;
+
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     8. SPACING SCALE (4px base)
+     ═══════════════════════════════════════════════════════════════════════════ */
+
+  --space-1:  4px;   /* Micro spacing, icon gaps */
+  --space-2:  8px;   /* Tight spacing, badge padding */
+  --space-3:  12px;  /* Default inner padding */
+  --space-4:  16px;  /* Standard component padding */
+  --space-5:  24px;  /* Section spacing */
+  --space-6:  32px;  /* Large section gaps */
+  --space-7:  48px;  /* Screen-level spacing */
+  --space-8:  64px;  /* Major layout gaps */
+
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     9. Z-INDEX SCALE
+     ═══════════════════════════════════════════════════════════════════════════ */
+
+  --z-base:    1;   /* Normal content flow */
+  --z-raised:  10;  /* Cards, hover effects */
+  --z-hud:     20;  /* HUD overlay during combat */
+  --z-panel:   30;  /* Slide-in panels */
+  --z-modal:   40;  /* Full-screen modals */
+  --z-toast:   50;  /* Notifications, always on top */
+
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     10. BORDER RADIUS SCALE
+     ═══════════════════════════════════════════════════════════════════════════ */
+
+  --radius-sm:    2px;     /* Micro elements: progress bar fill, tags */
+  --radius-md:    4px;     /* Buttons, badges, small cards */
+  --radius-lg:    8px;     /* Panels, standard cards */
+  --radius-xl:    12px;    /* Large cards, modals */
+  --radius-full:  9999px;  /* Pills, circular badges */
+
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     11. TRANSITION DURATIONS
+     All motion respects prefers-reduced-motion: reduce (handled in layout.css).
+     ═══════════════════════════════════════════════════════════════════════════ */
+
+  --transition-fast:    120ms;  /* Hover states, button press */
+  --transition-normal:  200ms;  /* Panel entrances, fade-ins */
+  --transition-slow:    350ms;  /* Modal opens, screen transitions */
+
+  /* Easing reference (use in shorthand transition properties) */
+  --ease-enter:   ease-out;
+  --ease-exit:    ease-in;
+  --ease-panel:   cubic-bezier(0.2, 0, 0, 1);
+  --ease-screen:  ease-in-out;
+
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     12. BREAKPOINTS (reference only — use in media queries)
+     compact:  0–767px   phones
+     medium:   768–1199px  tablets, small laptops
+     wide:     1200px+   desktop
+     ═══════════════════════════════════════════════════════════════════════════ */
+
+  --bp-medium:  768px;
+  --bp-wide:    1200px;
+
+}
+
+/* ─── Reduced motion: disable all transitions and animations ─────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration:  0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

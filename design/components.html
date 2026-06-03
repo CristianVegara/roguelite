@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Component Library — Tower Roguelite</title>
+  <link rel="stylesheet" href="../src/styles/tokens.css"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg-base);
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+      padding: 40px;
+    }
+    h1 { font-size: var(--text-title); font-weight: var(--weight-title); margin-bottom: 4px; }
+    .meta { font-size: var(--text-caption); color: var(--text-muted); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 40px; }
+    hr.divider { border: none; border-top: 1px solid var(--border-subtle); margin: 40px 0; }
+    .section-label { font-size: var(--text-label); font-weight: var(--weight-label); letter-spacing: 0.06em; color: var(--text-muted); text-transform: uppercase; margin-bottom: 20px; }
+    .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-start; margin-bottom: 16px; }
+    .col { display: flex; flex-direction: column; gap: 12px; }
+    .on-surface  { padding: 16px; background: var(--bg-surface);  border-radius: var(--radius-lg); }
+    .on-raised   { padding: 16px; background: var(--bg-raised);   border-radius: var(--radius-lg); }
+    .caption { font-size: var(--text-caption); color: var(--text-muted); letter-spacing: 0.06em; text-transform: uppercase; margin-top: 6px; }
+
+    /* ══════════════════════════════════════════════════════════
+       1. PANEL
+       ══════════════════════════════════════════════════════════ */
+    .panel {
+      background: var(--bg-raised);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-lg);
+      padding: var(--space-4);
+    }
+    .panel--active    { border-color: var(--border-active);  box-shadow: 0 0 6px rgba(123,52,189,0.25); }
+    .panel--danger    { border-color: var(--border-danger); }
+    .panel--success   { border-color: var(--border-success); }
+    .panel--legendary { border-color: var(--border-legendary); box-shadow: 0 0 10px rgba(222,165,65,0.35); }
+    .panel--float     { background: var(--bg-float); border-color: var(--border-subtle); }
+
+    /* ══════════════════════════════════════════════════════════
+       2. BUTTON
+       ══════════════════════════════════════════════════════════ */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      gap: var(--space-2);
+      padding: var(--space-2) var(--space-4);
+      border-radius: var(--radius-md);
+      font-family: var(--font-mono);
+      font-size: var(--text-label);
+      font-weight: var(--weight-label);
+      letter-spacing: var(--ls-label);
+      text-transform: uppercase;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all var(--transition-fast) var(--ease-enter);
+      user-select: none;
+    }
+    /* Primary */
+    .btn--primary {
+      background: var(--accent-primary);
+      color: var(--text-primary);
+      border-color: var(--accent-primary);
+    }
+    .btn--primary:hover  { background: var(--accent-glow); border-color: var(--accent-glow); }
+    .btn--primary:active { transform: scale(0.97); }
+    .btn--primary:focus-visible { outline: 2px solid var(--border-active); outline-offset: 3px; }
+    /* Secondary */
+    .btn--secondary {
+      background: transparent;
+      color: var(--text-primary);
+      border-color: var(--border-default);
+    }
+    .btn--secondary:hover  { border-color: var(--border-hover); color: var(--text-primary); }
+    .btn--secondary:active { transform: scale(0.97); }
+    .btn--secondary:focus-visible { outline: 2px solid var(--border-active); outline-offset: 3px; }
+    /* Ghost */
+    .btn--ghost {
+      background: transparent;
+      color: var(--text-secondary);
+      border-color: transparent;
+    }
+    .btn--ghost:hover  { color: var(--text-primary); background: rgba(123,52,189,0.08); }
+    .btn--ghost:active { transform: scale(0.97); }
+    /* Danger */
+    .btn--danger {
+      background: transparent;
+      color: var(--accent-danger);
+      border-color: var(--border-danger);
+    }
+    .btn--danger:hover  { background: rgba(180,28,57,0.12); }
+    .btn--danger:active { transform: scale(0.97); }
+    /* Disabled */
+    .btn[disabled], .btn--disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       3. CARD (Panel + accent bar top)
+       ══════════════════════════════════════════════════════════ */
+    .card {
+      background: var(--bg-raised);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      width: 160px;
+      transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+    }
+    .card:hover { border-color: var(--border-hover); }
+    .card__accent { height: 3px; width: 100%; }
+    .card__body   { padding: var(--space-3); }
+    .card__name   { font-size: var(--text-body); font-weight: 700; margin-bottom: 4px; }
+    .card__desc   { font-size: var(--text-caption); color: var(--text-secondary); line-height: 1.4; margin-bottom: 8px; }
+    .card__footer { font-size: var(--text-caption); color: var(--text-muted); display: flex; justify-content: space-between; }
+    /* Rarity variants */
+    .card--common    { border-color: var(--rarity-common-border);    box-shadow: var(--rarity-common-glow); }
+    .card--rare      { border-color: var(--rarity-rare-border);      box-shadow: var(--rarity-rare-glow); }
+    .card--epic      { border-color: var(--rarity-epic-border);      box-shadow: var(--rarity-epic-glow); }
+    .card--legendary { border-color: var(--rarity-legendary-border); box-shadow: var(--rarity-legendary-glow); }
+
+    /* ══════════════════════════════════════════════════════════
+       4. BADGE
+       ══════════════════════════════════════════════════════════ */
+    .badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 8px;
+      border-radius: var(--radius-md);
+      font-size: var(--text-label);
+      font-weight: var(--weight-label);
+      letter-spacing: var(--ls-label);
+      text-transform: uppercase;
+      border: 1px solid;
+    }
+    .badge--common    { color: var(--rarity-common-color);    border-color: var(--rarity-common-border);    background: rgba(131,117,139,0.08); }
+    .badge--rare      { color: var(--rarity-rare-color);      border-color: var(--rarity-rare-border);      background: rgba(65,129,197,0.08); }
+    .badge--epic      { color: var(--rarity-epic-color);      border-color: var(--rarity-epic-border);      background: rgba(123,52,189,0.08); box-shadow: var(--rarity-epic-glow); }
+    .badge--legendary { color: var(--rarity-legendary-color); border-color: var(--rarity-legendary-border); background: rgba(222,165,65,0.08); box-shadow: var(--rarity-legendary-glow); }
+    .badge--category  { color: var(--text-secondary); border-color: var(--border-subtle); background: var(--bg-raised); }
+    .badge--active    { color: var(--text-primary); border-color: var(--border-active); background: rgba(123,52,189,0.15); }
+    /* Sizes */
+    .badge--micro { padding: 2px 5px; font-size: 9px; }
+    .badge--full  { padding: 4px 10px; }
+
+    /* ══════════════════════════════════════════════════════════
+       5. PROGRESS BAR
+       ══════════════════════════════════════════════════════════ */
+    .progress {
+      background: var(--bg-surface);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      height: 8px;
+      width: 100%;
+    }
+    .progress__fill {
+      height: 100%;
+      border-radius: var(--radius-sm);
+      transition: width var(--transition-normal);
+    }
+    .progress--health .progress__fill  { background: var(--accent-nature); }
+    .progress--health.low .progress__fill  { background: var(--accent-fire); }
+    .progress--xp    .progress__fill   { background: var(--accent-lightning); opacity: 0.8; }
+    .progress--gold  .progress__fill   { background: var(--accent-gold); }
+    .progress--cat   .progress__fill   { background: var(--accent-primary); }
+    .progress--thin  { height: 4px; }
+    .progress--thick { height: 12px; }
+    .progress-wrap { display: flex; flex-direction: column; gap: 4px; width: 220px; }
+    .progress-label {
+      display: flex; justify-content: space-between;
+      font-size: var(--text-caption); color: var(--text-secondary);
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       6. STAT ROW
+       ══════════════════════════════════════════════════════════ */
+    .stat-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: var(--space-2) 0;
+      border-bottom: 1px solid var(--border-subtle);
+      font-family: var(--font-mono);
+    }
+    .stat-row:last-child { border-bottom: none; }
+    .stat-row__label { font-size: var(--text-label); font-weight: var(--weight-label); letter-spacing: var(--ls-label); color: var(--text-muted); text-transform: uppercase; }
+    .stat-row__value { font-size: var(--text-stat); font-weight: var(--weight-stat); font-variant-numeric: tabular-nums; color: var(--text-primary); }
+    .stat-row__value--gold    { color: var(--accent-gold); }
+    .stat-row__value--heal    { color: var(--accent-nature); }
+    .stat-row__value--danger  { color: var(--accent-danger); }
+    .stat-row__value--arcane  { color: var(--accent-glow); }
+
+    /* ══════════════════════════════════════════════════════════
+       7. TOOLTIP
+       ══════════════════════════════════════════════════════════ */
+    .tooltip-demo { position: relative; display: inline-block; }
+    .tooltip-box {
+      position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+      background: var(--bg-float);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-lg);
+      padding: var(--space-3);
+      width: 200px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+      pointer-events: none;
+      z-index: var(--z-panel);
+    }
+    .tooltip-box__title { font-size: var(--text-body); font-weight: 700; margin-bottom: 4px; }
+    .tooltip-box__body  { font-size: var(--text-caption); color: var(--text-secondary); line-height: 1.5; }
+
+    /* ══════════════════════════════════════════════════════════
+       8. MODAL
+       ══════════════════════════════════════════════════════════ */
+    .modal-demo {
+      position: relative;
+      background: var(--bg-overlay);
+      padding: 24px;
+      border-radius: var(--radius-lg);
+      width: 100%; max-width: 400px;
+    }
+    .modal-panel {
+      background: var(--bg-raised);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-xl);
+      padding: var(--space-5);
+      position: relative;
+    }
+    .modal-panel__header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-4); }
+    .modal-panel__title  { font-size: var(--text-heading); font-weight: var(--weight-heading); }
+    .modal-panel__close  { cursor: pointer; color: var(--text-muted); font-size: var(--text-heading); line-height: 1; padding: 4px 6px; border-radius: var(--radius-sm); }
+    .modal-panel__close:hover { color: var(--text-primary); background: var(--bg-float); }
+    .modal-panel__body   { font-size: var(--text-body); color: var(--text-secondary); line-height: var(--lh-body); }
+    .modal-panel__footer { margin-top: var(--space-4); display: flex; gap: var(--space-2); justify-content: flex-end; }
+
+    /* ══════════════════════════════════════════════════════════
+       9. SCROLL AREA
+       ══════════════════════════════════════════════════════════ */
+    .scroll-area {
+      overflow-y: auto;
+      max-height: 180px;
+      padding-right: var(--space-2);
+      scrollbar-width: thin;
+      scrollbar-color: var(--border-default) transparent;
+    }
+    .scroll-area::-webkit-scrollbar       { width: 4px; }
+    .scroll-area::-webkit-scrollbar-track { background: transparent; }
+    .scroll-area::-webkit-scrollbar-thumb { background: var(--border-default); border-radius: var(--radius-full); }
+    .scroll-area .stat-row { padding: var(--space-2) var(--space-1); }
+
+    /* ══════════════════════════════════════════════════════════
+       10. TAB
+       ══════════════════════════════════════════════════════════ */
+    .tab-bar { display: flex; border-bottom: 1px solid var(--border-subtle); }
+    .tab-item {
+      padding: var(--space-2) var(--space-4);
+      font-size: var(--text-label);
+      font-weight: var(--weight-label);
+      letter-spacing: var(--ls-label);
+      text-transform: uppercase;
+      color: var(--text-muted);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: color var(--transition-fast), border-color var(--transition-fast);
+      user-select: none;
+    }
+    .tab-item:hover   { color: var(--text-secondary); }
+    .tab-item--active { color: var(--text-primary); border-bottom-color: var(--border-active); }
+
+    /* ══════════════════════════════════════════════════════════
+       BUILD FINGERPRINT
+       ══════════════════════════════════════════════════════════ */
+    .fingerprint { display: flex; flex-direction: column; gap: 6px; width: 280px; }
+    .fp-row { display: flex; align-items: center; gap: 8px; }
+    .fp-label { font-size: var(--text-caption); color: var(--text-muted); width: 64px; flex-shrink: 0; text-transform: uppercase; letter-spacing: 0.04em; }
+    .fp-track { flex: 1; background: var(--bg-surface); border-radius: var(--radius-sm); height: 5px; overflow: hidden; }
+    .fp-fill  { height: 100%; border-radius: var(--radius-sm); }
+    .fp-pct   { font-size: var(--text-caption); color: var(--text-muted); width: 28px; text-align: right; font-variant-numeric: tabular-nums; }
+
+    /* ══════════════════════════════════════════════════════════
+       INTERACTIVE STATES DEMO
+       ══════════════════════════════════════════════════════════ */
+    .state-grid { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  </style>
+</head>
+<body>
+
+  <h1>Component Library</h1>
+  <p class="meta">Tower Roguelite · Design System Reference · Not part of game build</p>
+
+  <!-- ════════════════════════════════════════════════ 1. PANEL -->
+  <p class="section-label">1. Panel — Surface Layer System</p>
+  <div class="row">
+    <div>
+      <div class="panel" style="width:160px">
+        <div style="font-size:var(--text-label);color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em">Default</div>
+        <div style="font-size:var(--text-caption);color:var(--text-muted);margin-top:4px">Layer 3 · --bg-raised</div>
+      </div>
+      <div class="caption">Default</div>
+    </div>
+    <div>
+      <div class="panel panel--active" style="width:160px">
+        <div style="font-size:var(--text-label);color:var(--text-primary);text-transform:uppercase;letter-spacing:.06em">Selected</div>
+      </div>
+      <div class="caption">Active / Selected</div>
+    </div>
+    <div>
+      <div class="panel panel--danger" style="width:160px">
+        <div style="font-size:var(--text-label);color:var(--text-danger);text-transform:uppercase;letter-spacing:.06em">Error State</div>
+      </div>
+      <div class="caption">Danger</div>
+    </div>
+    <div>
+      <div class="panel panel--legendary" style="width:160px">
+        <div style="font-size:var(--text-label);color:var(--rarity-legendary-color);text-transform:uppercase;letter-spacing:.06em">Legendary</div>
+      </div>
+      <div class="caption">Legendary</div>
+    </div>
+    <div>
+      <div class="panel panel--float" style="width:160px">
+        <div style="font-size:var(--text-label);color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em">Tooltip</div>
+        <div style="font-size:var(--text-caption);color:var(--text-muted);margin-top:4px">Layer 4 · --bg-float</div>
+      </div>
+      <div class="caption">Float (tooltip/popover)</div>
+    </div>
+  </div>
+
+  <hr class="divider"/>
+
+  <!-- ════════════════════════════════════════════════ 2. BUTTON -->
+  <p class="section-label">2. Button — 4 Variants × 5 States</p>
+  <div class="row" style="margin-bottom:8px">
+    <button class="btn btn--primary">Play Run</button>
+    <button class="btn btn--secondary">View Details</button>
+    <button class="btn btn--ghost">Cancel</button>
+    <button class="btn btn--danger">Reset Save</button>
+  </div>
+  <div class="row">
+    <button class="btn btn--primary btn--disabled" disabled>Disabled Primary</button>
+    <button class="btn btn--secondary btn--disabled" disabled>Disabled Secondary</button>
+    <button class="btn btn--ghost btn--disabled" disabled>Disabled Ghost</button>
+    <button class="btn btn--danger btn--disabled" disabled>Disabled Danger</button>
+  </div>
+  <p style="font-size:var(--text-caption);color:var(--text-muted);margin-top:8px">Hover and click states are CSS-driven. Focus state uses 2px outline with --border-active.</p>
+
+  <hr class="divider"/>
+
+  <!-- ════════════════════════════════════════════════ 3. CARD -->
+  <p class="section-label">3. Card — Rarity Anatomy (4 tiers)</p>
+  <div class="row">
+    <!-- Common -->
+    <div class="card card--common">
+      <div class="card__accent" style="background:var(--rarity-common-color)"></div>
+      <div class="card__body">
+        <div class="badge badge--common badge--micro" style="margin-bottom:6px">▪ Common</div>
+        <div class="card__name" style="color:var(--rarity-common-color)">Iron Skin</div>
+        <div class="card__desc">Gain 3 armour. Reduces all incoming damage.</div>
+        <div class="card__footer"><span>1/3 stacks</span><span>Defense</span></div>
+      </div>
+    </div>
+    <!-- Rare -->
+    <div class="card card--rare">
+      <div class="card__accent" style="background:var(--rarity-rare-color);height:4px"></div>
+      <div class="card__body">
+        <div class="badge badge--rare badge--micro" style="margin-bottom:6px">◆ Rare</div>
+        <div class="card__name" style="color:var(--rarity-rare-color)">Static Charge</div>
+        <div class="card__desc">Attacks have a 20% chance to chain lightning to the target.</div>
+        <div class="card__footer"><span>1/2 stacks</span><span>Lightning</span></div>
+      </div>
+    </div>
+    <!-- Epic -->
+    <div class="card card--epic">
+      <div class="card__accent" style="background:var(--rarity-epic-color);height:5px"></div>
+      <div class="card__body">
+        <div class="badge badge--epic badge--micro" style="margin-bottom:6px">✦ Epic</div>
+        <div class="card__name" style="color:var(--rarity-epic-color)">Plague Carrier</div>
+        <div class="card__desc">On kill, spread poison stacks to the next enemy.</div>
+        <div class="card__footer"><span>1/1 stacks</span><span>Poison</span></div>
+      </div>
+    </div>
+    <!-- Legendary -->
+    <div class="card card--legendary">
+      <div class="card__accent" style="background:var(--rarity-legendary-color);height:6px"></div>
+      <div class="card__body">
+        <div class="badge badge--legendary badge--micro" style="margin-bottom:6px">♛ Legendary</div>
+        <div class="card__name" style="color:var(--rarity-legendary-name)">Lich Form</div>
+        <div class="card__desc" style="font-style:italic;color:var(--text-dim)">"Between life and death, power is limitless."</div>
+        <div class="card__footer"><span>1/1 stacks</span><span>Keystone</span></div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider"/>
+
+  <!-- ════════════════════════════════════════════════ 4. BADGE -->
+  <p class="section-label">4. Badge — Sizes × Variants</p>
+  <div class="row" style="margin-bottom:8px">
+    <span class="badge badge--common badge--full">▪ Common</span>
+    <span class="badge badge--rare badge--full">◆ Rare</span>
+    <span class="badge badge--epic badge--full">✦ Epic</span>
+    <span class="badge badge--legendary badge--full">♛ Legendary</span>
+  </div>
+  <div class="row" style="margin-bottom:8px">
+    <span class="badge badge--common">▪ Common</span>
+    <span class="badge badge--rare">◆ Rare</span>
+    <span class="badge badge--epic">✦ Epic</span>
+    <span class="badge badge--legendary">♛ Legendary</span>
+    <span class="badge badge--category">Damage</span>
+    <span class="badge badge--active">Active</span>
+  </div>
+  <div class="row">
+    <span class="badge badge--common badge--micro">▪</span>
+    <span class="badge badge--rare badge--micro">◆</span>
+    <span class="badge badge--epic badge--micro">✦</span>
+    <span class="badge badge--legendary badge--micro">♛</span>
+    <span style="font-size:var(--text-caption);color:var(--text-muted);align-self:center">← micro (icon only, tooltip on hover)</span>
+  </div>
+
+  <hr class="divider"/>
+
+  <!-- ════════════════════════════════════════════════ 5. PROGRESS BAR -->
+  <p class="section-label">5. ProgressBar — HP, XP, Gold, Category</p>
+  <div class="col">
+    <div class="progress-wrap">
+      <div class="progress-label"><span>Player HP</span><span style="font-variant-numeric:tabular-nums">847 / 1200</span></div>
+      <div class="progress progress--health"><div class="progress__fill" style="width:70%"></div></div>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-label"><span>Low HP warning</span><span style="color:var(--accent-fire)">120 / 1200</span></div>
+      <div class="progress progress--health low"><div class="progress__fill" style="width:10%"></div></div>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-label"><span>XP — Level 4</span><span>Lv 4 → 5</span></div>
+      <div class="progress progress--xp progress--thin"><div class="progress__fill" style="width:45%"></div></div>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-label"><span>Build Fingerprint — Damage</span><span>38%</span></div>
+      <div class="progress progress--cat progress--thin"><div class="progress__fill" style="width:38%;background:var(--cat-damage)"></div></div>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-label"><span>Build Fingerprint — Poison</span><span>22%</span></div>
+      <div class="progress progress--cat progress--thin"><div class="progress__fill" style="width:22%;background:var(--cat-poison)"></div></div>
+    </div>
+  </div>
+
+  <hr class="divider"/>
+
+  <!-- ════════════════════════════════════════════════ 6. STAT ROW -->
+  <p class="section-label">6. StatRow — 2-column label + value</p>
+  <div class="panel" style="max-width:320px">
+    <div class="stat-row"><span class="stat-row__label">Final DPS</span><span class="stat-row__value">1,247</span></div>
+    <div class="stat-row"><span class="stat-row__label">Total Damage</span><span class="stat-row__value">84,322</span></div>
+    <div class="stat-row"><span class="stat-row__label">Total Healing</span><span class="stat-row__value stat-row__value--heal">12,088</span></div>
+    <div class="stat-row"><span class="stat-row__label">Highest Hit</span><span class="stat-row__value stat-row__value--arcane">3,740</span></div>
+    <div class="stat-row"><span class="stat-row__label">Gold Earned</span><span class="stat-row__value stat-row__value--gold">★ 240</span></div>
+    <div class="stat-row"><span class="stat-row__label">Bosses Killed</span><span class="stat-row__value stat-row__value--danger">7</span></div>
+  </div>
+
+  <hr class="divider"/>
+
+  <!-- ════════════════════════════════════════════════ 7. TOOLTIP -->
+  <p class="section-label">7. Tooltip — 400ms delay on hover</p>
+  <div class="row" style="padding-top:60px">
+    <div class="tooltip-demo">
+      <span class="badge badge--epic">✦ Static Discharge</span>
+      <div class="tooltip-box">
+        <div class="tooltip-box__title">Static Discharge</div>
+        <div class="tooltip-box__body">Attacks have a 25% chance to deal 15–40 bonus lightning damage to the target. Does not trigger burn.</div>
+      </div>
+    </div>
+    <div class="tooltip-demo" style="margin-left:220px">
+      <span class="badge badge--legendary">♛ Lich Form</span>
+      <div class="tooltip-box" style="border-color:var(--rarity-legendary-border);box-shadow:var(--rarity-legendary-glow)">
+        <div class="tooltip-box__title" style="color:var(--rarity-legendary-name)">Lich Form</div>
+        <div class="tooltip-box__body">Transform. On kill, restore 8% max HP. Your summons deal 50% more damage. <em style="color:var(--text-dim)">Keystone — only one active at a time.</em></div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider"/>
+
+  <!-- ════════════════════════════════════════════════ 8. MODAL -->
+  <p class="section-label">8. Modal — Standard + Wide</p>
+  <div class="modal-demo">
+    <div class="modal-panel">
+      <div class="modal-panel__header">
+        <div class="modal-panel__title">Choose an Upgrade</div>
+        <div class="modal-panel__close">✕</div>
+      </div>
+      <div class="modal-panel__body">Three upgrade cards would be shown here. The overlay dims the arena behind the panel. On desktop this slides in from the right — the arena remains visible at reduced opacity.</div>
+      <div class="modal-panel__footer">
+        <button class="btn btn--ghost">Skip</button>
+        <button class="btn btn--primary">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider"/>
+
+  <!-- ════════════════════════════════════════════════ 9. SCROLL AREA -->
+  <p class="section-label">9. ScrollArea — Thin custom scrollbar</p>
+  <div class="panel" style="max-width:320px">
+    <div class="scroll-area">
+      <div class="stat-row"><span class="stat-row__label">Iron Skin</span><span class="stat-row__value">×2</span></div>
+      <div class="stat-row"><span class="stat-row__label">Eagle Eye</span><span class="stat-row__value">×1</span></div>
+      <div class="stat-row"><span class="stat-row__label">Venom Tips</span><span class="stat-row__value">×3</span></div>
+      <div class="stat-row"><span class="stat-row__label">Static Charge</span><span class="stat-row__value">×1</span></div>
+      <div class="stat-row"><span class="stat-row__label">Reactive Plating</span><span class="stat-row__value">×2</span></div>
+      <div class="stat-row"><span class="stat-row__label">Kindling</span><span class="stat-row__value">×1</span></div>
+      <div class="stat-row"><span class="stat-row__label">Precision</span><span class="stat-row__value">×2</span></div>
+      <div class="stat-row"><span class="stat-row__label">Toxic Coating</span><span class="stat-row__value">×1</span></div>
+    </div>
+  </div>
+
+  <hr class="divider"/>
+
+  <!-- ════════════════════════════════════════════════ 10. TAB -->
+  <p class="section-label">10. Tab — HUD rail and hub navigation</p>
+  <div class="panel" style="max-width:300px;padding:0">
+    <div class="tab-bar">
+      <div class="tab-item tab-item--active">Build</div>
+      <div class="tab-item">Stats</div>
+      <div class="tab-item">Log</div>
+    </div>
+    <div style="padding:var(--space-4);font-size:var(--text-caption);color:var(--text-muted)">Tab content would appear here. The active tab uses --border-active underline.</div>
+  </div>
+
+  <hr class="divider"/>
+
+  <!-- ════════════════════════════════════════════════ BUILD FINGERPRINT -->
+  <p class="section-label">Build Fingerprint — Category Distribution</p>
+  <div class="panel" style="max-width:360px">
+    <div style="font-size:var(--text-label);font-weight:var(--weight-label);color:var(--text-muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:12px">Endless Plague Build</div>
+    <div class="fingerprint">
+      <div class="fp-row"><span class="fp-label">Damage</span><div class="fp-track"><div class="fp-fill" style="width:22%;background:var(--cat-damage)"></div></div><span class="fp-pct">22%</span></div>
+      <div class="fp-row"><span class="fp-label">Poison</span><div class="fp-track"><div class="fp-fill" style="width:38%;background:var(--cat-poison)"></div></div><span class="fp-pct">38%</span></div>
+      <div class="fp-row"><span class="fp-label">Critical</span><div class="fp-track"><div class="fp-fill" style="width:15%;background:var(--cat-critical)"></div></div><span class="fp-pct">15%</span></div>
+      <div class="fp-row"><span class="fp-label">Lifesteal</span><div class="fp-track"><div class="fp-fill" style="width:10%;background:var(--cat-lifesteal)"></div></div><span class="fp-pct">10%</span></div>
+      <div class="fp-row"><span class="fp-label">Defense</span><div class="fp-track"><div class="fp-fill" style="width:8%;background:var(--cat-defense)"></div></div><span class="fp-pct">8%</span></div>
+      <div class="fp-row"><span class="fp-label">Speed</span><div class="fp-track"><div class="fp-fill" style="width:7%;background:var(--cat-speed)"></div></div><span class="fp-pct">7%</span></div>
+    </div>
+  </div>
+
+</body>
+</html>

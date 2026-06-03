@@ -1,0 +1,304 @@
+/**
+ * hud.css — HTML CombatHUD styles.
+ *
+ * The HUD frame is a 480×640 container centred over the Phaser canvas.
+ * All pixel values here mirror the layout constants in GameScene.ts:
+ *   HEADER_H    = 44   (top bar)
+ *   MOD_STRIP_Y = 44, MOD_STRIP_H = 22
+ *   HP_PANEL_Y  = 66,  HP_PANEL_H = 58, HP_PANEL_W = 232
+ *   HP_L_X      = 4,   HP_R_X = 242
+ *   BOT_BAR_Y   = 588
+ *
+ * During M4 the Phaser HUD and this HTML HUD are visible simultaneously
+ * for comparison. In M5 the Phaser HUD is deleted.
+ */
+
+/* ── Frame ───────────────────────────────────────────────────────────────── */
+
+.hud-frame {
+  position:  absolute;
+  width:     480px;
+  height:    640px;
+  left:      50%;
+  top:       50%;
+  transform: translate(-50%, -50%);
+  /* Frame itself passes clicks through; interactive children opt-in */
+  pointer-events: none;
+  /* For debugging layout: uncomment to see the frame boundary */
+  /* outline: 1px dashed rgba(255,0,0,0.3); */
+}
+
+/* ── Top bar ─────────────────────────────────────────────────────────────── */
+
+.hud-topbar {
+  position:         absolute;
+  top:              0; left: 0; right: 0;
+  height:           44px;
+  background-color: #0c0c1e;
+  border-bottom:    1px solid #1e1e36;
+}
+
+.hud-floor-label {
+  position:    absolute;
+  top:         0; left: 0; right: 0;
+  height:      44px;
+  display:     flex;
+  align-items: center;
+  justify-content: center;
+  font-size:   15px;
+  font-weight: var(--weight-title);
+  font-family: var(--font-mono);
+  color:       var(--text-primary);
+  pointer-events: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-class-badge {
+  position:         absolute;
+  top:              6px; left: 4px;
+  width:            114px; height: 18px;
+  display:          flex;
+  align-items:      center;
+  padding:          0 6px;
+  border-radius:    var(--radius-sm);
+  font-size:        9px;
+  font-family:      var(--font-mono);
+  font-weight:      var(--weight-label);
+  letter-spacing:   0.04em;
+  pointer-events:   none;
+  overflow:         hidden;
+  white-space:      nowrap;
+}
+
+/* ── Speed buttons ───────────────────────────────────────────────────────── */
+
+.hud-speed-btns {
+  position:    absolute;
+  top:         12px;
+  right:       6px;
+  display:     flex;
+  gap:         3px;
+  pointer-events: auto;
+}
+
+.hud-speed-btn {
+  width:           34px;
+  height:          16px;
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  font-size:       9px;
+  font-family:     var(--font-mono);
+  font-weight:     var(--weight-label);
+  border-radius:   var(--radius-sm);
+  cursor:          pointer;
+  border:          1px solid #222240;
+  background:      #0e0e1a;
+  color:           #555577;
+  transition:      background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+  user-select:     none;
+}
+
+.hud-speed-btn:hover {
+  background:      #1a1a30;
+  border-color:    #4444aa;
+  color:           #aaaacc;
+}
+
+.hud-speed-btn.is-active {
+  background:      #1e3a1e;
+  border-color:    #2ecc71;
+  color:           #2ecc71;
+}
+
+/* ── Modifier strip ──────────────────────────────────────────────────────── */
+
+.hud-mod-strip {
+  position:    absolute;
+  top:         44px; left: 0; right: 0;
+  height:      22px;
+  display:     flex;
+  align-items: center;
+  padding:     0 10px;
+  overflow:    hidden;
+  pointer-events: none;
+}
+
+.hud-mod-strip.is-hidden {
+  display: none;
+}
+
+.hud-mod-accent {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+}
+
+.hud-mod-name {
+  font-size:      9px;
+  font-family:    var(--font-mono);
+  font-weight:    var(--weight-label);
+  letter-spacing: 0.04em;
+  white-space:    nowrap;
+  min-width:      126px;
+  margin-left:    4px;
+}
+
+.hud-mod-desc {
+  font-size:   8px;
+  font-family: var(--font-mono);
+  color:       #666688;
+  white-space: nowrap;
+  overflow:    hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── HP panels ───────────────────────────────────────────────────────────── */
+
+.hud-hp-panel {
+  position:         absolute;
+  top:              66px;
+  height:           58px;
+  width:            232px;
+  background-color: #0c0c1e;
+  border:           1px solid #1a1a30;
+  border-radius:    var(--radius-md);
+  overflow:         hidden;
+  pointer-events:   none;
+}
+
+.hud-hp-panel--player { left:   4px; }
+.hud-hp-panel--enemy  { left: 242px; }
+
+.hud-hp-accent {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+}
+
+.hud-hp-name {
+  position:      absolute;
+  top:           11px; left: 8px;
+  font-size:     9px;
+  font-family:   var(--font-mono);
+  font-weight:   var(--weight-label);
+  letter-spacing: 0.04em;
+  line-height:   1;
+}
+
+.hud-hp-value {
+  position:    absolute;
+  top:         11px; right: 8px;
+  font-size:   9px;
+  font-family: var(--font-mono);
+  color:       #9999bb;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* HP bar track */
+.hud-hp-track {
+  position:         absolute;
+  left:             8px; right: 8px;
+  top:              28px;
+  height:           8px;
+  background-color: #12121e;
+  border-radius:    var(--radius-sm);
+  overflow:         hidden;
+}
+
+.hud-hp-fill {
+  height:        100%;
+  border-radius: var(--radius-sm);
+  transition:    width 80ms linear, background-color 200ms;
+}
+
+/* Status pips (enemy panel) */
+.hud-status-pips {
+  position:    absolute;
+  bottom:      6px; left: 8px;
+  display:     flex;
+  gap:         6px;
+  font-size:   8px;
+  font-family: var(--font-mono);
+}
+
+.hud-pip--poison { color: #9b59b6; }
+.hud-pip--burn   { color: #e67e22; }
+
+/* ── Bottom bar ──────────────────────────────────────────────────────────── */
+
+.hud-botbar {
+  position:         absolute;
+  top:              588px; left: 0; right: 0;
+  height:           52px;
+  background-color: #0b0b1c;
+  border-top:       1px solid #1a1a30;
+  pointer-events:   none;
+}
+
+.hud-gold {
+  position:    absolute;
+  top:         10px; left: 38px;
+  font-size:   10px;
+  font-family: var(--font-mono);
+  font-weight: var(--weight-label);
+  color:       #ffd700;
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-gold-label {
+  position:  absolute;
+  top:       10px; left: 8px;
+  font-size: 8px;
+  font-family: var(--font-mono);
+  color:     #555577;
+}
+
+.hud-kb-hints {
+  position:    absolute;
+  top:         10px; right: 6px;
+  font-size:   8px;
+  font-family: var(--font-mono);
+  color:       #444466;
+}
+
+.hud-relic-text {
+  position:    absolute;
+  top:         28px; left: 8px;
+  font-size:   8px;
+  font-family: var(--font-mono);
+  color:       #444466;
+  max-width:   300px;
+  overflow:    hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* XP bar */
+.hud-xp-track {
+  position:         absolute;
+  right:            8px;
+  top:              25px;
+  width:            100px;
+  height:           5px;
+  background-color: #12121e;
+  border-radius:    var(--radius-sm);
+  overflow:         hidden;
+}
+
+.hud-xp-fill {
+  height:        100%;
+  border-radius: var(--radius-sm);
+  background:    rgba(79, 195, 247, 0.7);
+  transition:    width 120ms linear;
+}
+
+.hud-xp-level {
+  position:    absolute;
+  right:       114px;
+  top:         28px;
+  font-size:   8px;
+  font-family: var(--font-mono);
+  color:       #444466;
+}

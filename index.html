@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tower Roguelite</title>
+    <!-- Design tokens must load first — all other stylesheets depend on them -->
+    <link rel="stylesheet" href="/src/styles/tokens.css" />
+    <link rel="stylesheet" href="/src/styles/reset.css" />
+    <link rel="stylesheet" href="/src/styles/layout.css" />
+    <link rel="stylesheet" href="/src/styles/components/hud.css" />
+  </head>
+  <body>
+    <!--
+      #app — outermost shell, fills the full viewport.
+
+      Layer stack (bottom to top):
+        #canvas-mount   Phaser injects its canvas here
+        #ui-layer       HTML overlay, pointer-events: none by default
+          #screen-root  Active HTML screen (home, class-select, etc.)
+          #hud-root     Combat HUD overlaid on the Phaser canvas
+          #modal-root   Upgrade / relic / merchant / game-over modals
+          #toast-root   Notifications, highest z-index
+    -->
+    <div id="app">
+
+      <!-- Phaser canvas mount.
+           Starts visible so Phaser scenes work during migration.
+           Router adds is-hidden only once a real HTML screen is registered
+           for the active route (Step M6+). -->
+      <div id="canvas-mount"></div>
+
+      <!-- HTML UI layer — overlaid on canvas, transparent by default -->
+      <div id="ui-layer">
+
+        <!-- Router mounts screens here -->
+        <div id="screen-root"></div>
+
+        <!-- Combat HUD overlaid on the arena — active only during a run -->
+        <div id="hud-root"></div>
+
+        <!-- Modals mount here, above screens -->
+        <div id="modal-root"></div>
+
+        <!-- Notifications — always on top -->
+        <div id="toast-root"></div>
+
+      </div><!-- /#ui-layer -->
+
+    </div><!-- /#app -->
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

@@ -1,0 +1,1162 @@
+import Phaser from 'phaser';
+import { GAME_WIDTH, GAME_HEIGHT } from '../config/GameConfig';
+import { Player } from '../entities/Player';
+import { Enemy }  from '../entities/Enemy';
+import { RulesEngine, AttackResult, DefenseResult } from '../combat/RulesEngine';
+import { FloorManager } from '../floors/FloorManager';
+import { pickRunUpgrades, ALL_UPGRADES } from '../data/AllUpgrades';
+import { pickRelics, ALL_RELICS } from '../data/AllRelics';
+import { ServiceLocator } from '../services/ServiceLocator';
+import { RunResultDTO }   from '../services/types';
+import { UpgradeSceneData } from './UpgradeScene';
+import { RelicSceneData } from './RelicScene';
+import { OwnedUpgrades, FloaterType } from '../data/UpgradeDefinition';
+import { metaService, MetaService } from '../meta/MetaService';
+import { StatsPanel }  from '../ui/StatsPanel';
+import { BuildPanel }  from '../ui/BuildPanel';
+import { ClassDefinition, findClass } from '../data/ClassDefinition';
+import { getRunConfig } from '../RunConfig';
+import { XPManager }    from '../combat/XPManager';
+// ── Bridge ────────────────────────────────────────────────────────────────────
+import { bus }      from '../bridge/GameEventBus';
+import { runState } from '../bridge/RunStateStore';
+
+type CombatState = 'fighting' | 'floor_clear' | 'player_dead' | 'special_floor';
+
+const PLAYER_X = 130;
+const ENEMY_X  = 350;
+const COMBAT_Y = 350;
+
+// ── Layout zones ─────────────────────────────────────────────────────────────
+const HEADER_H     = 44;   // top bar (floor label, class badge, speed buttons)
+const MOD_STRIP_Y  = HEADER_H;
+const MOD_STRIP_H  = 22;
+const HP_PANEL_Y   = MOD_STRIP_Y + MOD_STRIP_H;   // 66
+const HP_PANEL_H   = 58;
+const BOT_BAR_Y    = GAME_HEIGHT - 52;             // bottom info bar top edge (588)
+
+export class GameScene extends Phaser.Scene {
+  private player!:       Player;
+  private enemy!:        Enemy;
+  private floorManager!: FloorManager;
+  private engine!:       RulesEngine;
+  private owned!:        OwnedUpgrades;
+  private ownedRelics!:  Set<string>;
+  private state:         CombatState = 'fighting';
+  private statsPanel!:   StatsPanel;
+  private buildPanel!:   BuildPanel;
+
+  private killCount     = 0;
+  private bossKillCount = 0;
+  private xpManager!:   XPManager;
+
+  // Pending flags set by XP events; consumed in onFloorClear
+  private pendingLevelUpUpgrade = false;
+  private pendingBossUpgrade    = false;
+  private currentClass: ClassDefinition | null = null;
+  private runStartTime     = 0;   // Date.now() at run start, for duration tracking
+  /** Display name of the current enemy — tracked here since Enemy doesn't store it. */
+  private currentEnemyName = 'ENEMY';
+  /** Unsubscribe handle for the bus speed:change listener. */
+  private busOffSpeed: (() => void) | null = null;
+
+  // Speed controls (×1, ×1.5, ×2)
+  private gameSpeed: 1 | 1.5 | 2 = 1;
+
+  private overlay!: Phaser.GameObjects.Container;
+
+  constructor() { super({ key: 'GameScene' }); }
+
+  // ---------------------------------------------------------------------------
+  // Lifecycle
+  // ---------------------------------------------------------------------------
+
+  create(): void {
+    this.state        = 'fighting';
+    const cfg0        = getRunConfig();
+    this.floorManager = new FloorManager({
+      bossesOnly:            cfg0.rules.bossesOnly,
+      allFloorsModified:     cfg0.rules.allFloorsModified,
+      bossEveryNFloors:      cfg0.rules.bossEveryNFloors,
+      enemyHpMultiplier:     cfg0.rules.enemyHpMultiplier,
+      enemyDamageMultiplier: cfg0.rules.enemyDamageMultiplier,
+      enemySpeedMultiplier:  cfg0.rules.enemySpeedMultiplier,
+    });
+    this.owned               = new Map();
+    this.ownedRelics         = new Set();
+    this.pendingLevelUpUpgrade = false;
+    this.pendingBossUpgrade    = false;
+    this.drawBackground();
+    this.createEntities();
+
+    // XP + leveling
+    this.xpManager = new XPManager();
+    this.xpManager.onLevelUp = () => { this.pendingLevelUpUpgrade = true; };
+
+    // Apply chosen class (from ClassScene → RunConfig)
+    const cfg = getRunConfig();
+    this.currentClass = findClass(cfg.classId);
+    if (this.currentClass) {
+      this.currentClass.apply(this.player.stats, this.engine);
+    }
+
+    this.applyModeRules();
+    this.createOverlay();
+    this.statsPanel  = new StatsPanel(this, this.player.stats, this.engine);
+    this.buildPanel  = new BuildPanel(this, this.owned, this.ownedRelics);
+    void this.buildPanel;   // panel is self-managing via B key binding
+    this.engine.onFloorStart(this.floorManager.currentModifier);
+    this.runStartTime = Date.now();
+
+    // ── Bridge: push initial run state so HTML HUD has data from frame 0 ────
+    this.syncRunState();
+
+    // ── Bridge: HTML speed buttons communicate speed changes via bus ─────────
+    this.busOffSpeed = bus.on('speed:change', (e) => {
+      this.setGameSpeed(e.payload.speed);
+    });
+
+    // Clean up the bus listener when this scene is destroyed
+    this.events.once(Phaser.Scenes.Events.DESTROY, () => {
+      this.busOffSpeed?.();
+      this.busOffSpeed = null;
+    });
+  }
+
+  update(_time: number, delta: number): void {
+    if (this.state !== 'fighting') return;
+
+    const scaledDelta = delta * this.gameSpeed;
+
+    // ── 1. Tick DoTs + modifier effects ─────────────────────────────────────
+    const dot = this.engine.tickStatusEffects(scaledDelta, this.enemy);
+
+    if (dot.poisonDamage > 0) {
+      this.enemy.takeDamage(dot.poisonDamage);
+      this.spawnFloater(this.enemy.x, this.enemy.y - 20, dot.poisonDamage, 'poison');
+    }
+    if (dot.burnDamage > 0) {
+      this.enemy.takeDamage(dot.burnDamage);
+      this.spawnFloater(this.enemy.x, this.enemy.y - 20, dot.burnDamage,
+        dot.burnIsCrit ? 'crit' : 'burn');
+    }
+    if (dot.dotHeal > 0) {
+      const gained = this.player.heal(dot.dotHeal);
+      this.engine.trackHealing(gained);
+      this.spawnFloater(this.player.x, this.player.y - 20, dot.dotHeal, 'heal');
+    }
+    // Regenerating modifier: enemy heals
+    if (dot.enemyRegenHeal > 0 && !this.enemy.isDead()) {
+      this.enemy.stats.hp = Math.min(this.enemy.stats.maxHp, this.enemy.stats.hp + dot.enemyRegenHeal);
+    }
+
+    if ((dot.poisonDamage > 0 || dot.burnDamage > 0) && this.enemy.isDead()) {
+      this.handleEnemyKill();
+      return;
+    }
+
+    // ── 2. Player attack ─────────────────────────────────────────────────────
+    if (this.player.tickAttack(scaledDelta * this.engine.playerSpeedMultiplier)) {
+      const result = this.engine.resolvePlayerAttack(this.enemy);
+      this.applyAttackResult(result);
+
+      if (this.enemy.isDead()) {
+        const overkill = Math.max(0, result.damage - Math.max(0, this.enemy.stats.hp));
+        this.engine.storeOverkill(overkill);
+        this.handleEnemyKill();
+        return;
+      }
+    }
+
+    // ── 3. Enemy attack ──────────────────────────────────────────────────────
+    if (!this.enemy.isDead() && this.enemy.tickAttack(scaledDelta)) {
+      const defResult = this.engine.resolveEnemyAttack(this.enemy.stats.damage, this.enemy);
+      this.applyDefenseResult(defResult);
+
+      if (this.player.isDead()) {
+        if (this.engine.checkPhoenix()) {
+          this.player.stats.hp = 1;
+          this.player.takeDamage(0);
+        } else {
+          this.transition('player_dead');
+        }
+      }
+    }
+
+    this.refreshHpTexts();
+    this.statsPanel.update();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Combat result application
+  // ---------------------------------------------------------------------------
+
+  private applyAttackResult(result: AttackResult): void {
+    this.enemy.takeDamage(result.damage);
+
+    if (result.summonDamage  > 0) this.enemy.takeDamage(result.summonDamage);
+    if (result.lightningDamage > 0) this.enemy.takeDamage(result.lightningDamage);
+    if (result.areaDamage    > 0) this.enemy.takeDamage(result.areaDamage);
+
+    // Heal from lifesteal
+    if (result.healAmount > 0) {
+      const gained = this.player.heal(result.healAmount);
+      this.engine.trackHealing(gained);
+    }
+
+    // Alchemist's Flask: heal floaters were pushed into defResult floaters,
+    // but for attack result we check the floaters array for 'heal' typed ones
+    // applied via the alchemist flask are in defense context — no action here.
+
+    // Transfuser relic: lifesteal also on area + summon damage
+    if (this.engine.hasUpgrade('relic_transfuser')) {
+      const ls = this.player.stats.lifesteal ?? 0;
+      const bonus = Math.floor((result.areaDamage + result.summonDamage) * ls);
+      if (bonus > 0) {
+        const gained = this.player.heal(bonus);
+        this.engine.trackHealing(gained);
+        this.spawnFloater(this.player.x, this.player.y - 20, bonus, 'heal');
+      }
+    }
+
+    // Overcharge: excess heal → shield
+    if (result.excessHeal > 0 && this.engine.hasUpgrade('overcharge')) {
+      const s = this.player.stats;
+      const maxSh = s.maxShield ?? 0;
+      if (maxSh > 0) {
+        s.shield = Math.min(maxSh, (s.shield ?? 0) + result.excessHeal);
+      }
+    }
+
+    if (result.poisonApplied > 0) {
+      const s = this.player.stats;
+      this.enemy.applyPoison(
+        result.poisonApplied,
+        s.poisonDamage ?? 2,
+        1000 / (s.poisonTickRate ?? 2),
+        s.poisonMaxStacks ?? 10,
+      );
+    }
+    if (result.burnApplied) {
+      const s = this.player.stats;
+      this.enemy.applyBurn(
+        s.burnDamage ?? 5,
+        (s.burnDuration ?? 3) * 1000,
+        500,
+        s.burnCanCrit ?? false,
+      );
+    }
+
+    // Thorned / Mirrored floor modifier: player takes recoil
+    const recoil = result.thornDamage + result.mirrorDamage;
+    if (recoil > 0) {
+      this.player.takeDamage(recoil);
+      this.spawnFloater(this.player.x, this.player.y - 20, recoil, 'reflect');
+      if (this.player.isDead()) {
+        if (this.engine.checkPhoenix()) {
+          this.player.stats.hp = 1;
+          this.player.takeDamage(0);
+        } else {
+          this.transition('player_dead');
+          return;
+        }
+      }
+    }
+
+    for (const f of result.floaters) {
+      const ex = f.target === 'enemy' ? this.enemy.x : this.player.x;
+      const ey = f.target === 'enemy' ? this.enemy.y : this.player.y;
+      this.spawnFloater(ex, ey - 18, f.value, f.type);
+    }
+
+    this.refreshHpTexts();
+  }
+
+  private applyDefenseResult(defResult: DefenseResult): void {
+    this.player.takeDamage(defResult.damageTaken);
+
+    if (defResult.reflectDamage > 0) {
+      this.enemy.takeDamage(defResult.reflectDamage);
+    }
+
+    // Vampiric enemy modifier: enemy heals on damage dealt
+    if (defResult.enemyHeal > 0 && !this.enemy.isDead()) {
+      this.enemy.stats.hp = Math.min(this.enemy.stats.maxHp, this.enemy.stats.hp + defResult.enemyHeal);
+    }
+
+    for (const f of defResult.floaters) {
+      const ex = f.target === 'player' ? this.player.x : this.enemy.x;
+      const ey = f.target === 'player' ? this.player.y : this.enemy.y;
+      // Heal floaters from Alchemist's Flask
+      if (f.type === 'heal' && f.target === 'player') {
+        const gained = this.player.heal(f.value);
+        this.engine.trackHealing(gained);
+      }
+      this.spawnFloater(ex, ey - 18, f.value, f.type);
+    }
+
+    this.refreshHpTexts();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Floor transitions
+  // ---------------------------------------------------------------------------
+
+  private handleEnemyKill(): void {
+    this.killCount++;
+
+    const isBoss = this.enemy.isBoss;
+    if (isBoss) {
+      this.bossKillCount++;
+      this.engine.onBossKilled();
+      // BUG #2 fix: clear boss label immediately — don't wait for advanceFloor
+      this.currentEnemyName = 'ENEMY';
+      this.syncRunState();
+      // Boss kills always grant an upgrade pick (separate from level-up)
+      this.pendingBossUpgrade = true;
+      this.xpManager.bossXP(this.floorManager.currentFloor);
+      // Bridge: boss killed event
+      bus.emit({ type: 'boss:killed', payload: {
+        floor:    this.floorManager.currentFloor,
+        bossName: this.currentEnemyName,
+      }});
+    } else {
+      // Normal kill: grant XP (level-up fires onLevelUp callback → pendingLevelUpUpgrade)
+      this.xpManager.killXP(this.floorManager.currentFloor);
+    }
+
+    // Volatile modifier: enemy explodes on death
+    if (this.engine.volatile && this.enemy.stats.maxHp > 0) {
+      const explosion = Math.floor(this.enemy.stats.maxHp * 0.25);
+      this.player.takeDamage(explosion);
+      this.spawnFloater(this.player.x, this.player.y - 30, explosion, 'burn');
+      if (this.player.isDead() && !this.engine.checkPhoenix()) {
+        this.transition('player_dead');
+        return;
+      } else if (this.player.isDead()) {
+        this.player.stats.hp = 1;
+      }
+    }
+
+    // Cursed floor modifier: bonus gold on kill
+    const mod = this.floorManager.currentModifier;
+    if (mod?.bonusGold) {
+      this.engine.addGold(mod.bonusGold);
+      this.spawnFloater(this.enemy.x, this.enemy.y - 30, mod.bonusGold, 'gold');
+    }
+
+    // Bomb Collar relic: store explosion damage for carryover
+    if (this.engine.hasUpgrade('relic_bomb_collar')) {
+      const blast = Math.floor(this.enemy.stats.maxHp * 0.50);
+      const data = this.engine.getRelicData('bomb_collar');
+      data['pendingBlast'] = blast;
+    }
+
+    // Golden Idol relic: gold per relic owned
+    if (this.engine.hasUpgrade('relic_golden_idol')) {
+      const relicBonus = this.ownedRelics.size * 3;
+      this.engine.addGold(relicBonus);
+    }
+
+    const killResult = this.engine.onEnemyKilled(this.enemy);
+    if (killResult.pendingHeal > 0) {
+      const gained = this.player.heal(killResult.pendingHeal);
+      if (gained > 0) {
+        this.engine.trackHealing(gained);
+        this.spawnFloater(this.player.x, this.player.y - 20, gained, 'heal');
+      }
+    }
+    this.transition('floor_clear');
+  }
+
+  private transition(next: CombatState): void {
+    this.state = next;
+    this.refreshHpTexts();
+    if (next === 'floor_clear') this.onFloorClear();
+    else                        this.onPlayerDead();
+  }
+
+  private onFloorClear(): void {
+    const floor     = this.floorManager.currentFloor;
+    const { rules } = getRunConfig();
+
+    // Bridge: floor cleared event
+    bus.emit({ type: 'floor:cleared', payload: {
+      floor,
+      isBoss: this.enemy.isBoss,
+    }});
+
+    // Boss Rush keeps its own cadence (upgrade + relic every 3 bosses).
+    // Standard mode: upgrades come from LEVEL-UPS and BOSS KILLS only.
+    // Relic floors remain floor-based (FloorManager decides).
+    const isBossRush      = rules.bossesOnly;
+    const isUpgradeFloor  = isBossRush
+      ? floor % 3 === 0
+      : (this.pendingBossUpgrade || this.pendingLevelUpUpgrade);
+    const isRelicFloor    = isBossRush
+      ? floor % 3 === 0
+      : this.floorManager.isRelicFloor() && !isUpgradeFloor;
+
+    // Consume flags regardless of which branch fires
+    const doUpgrade = isUpgradeFloor;
+    this.pendingBossUpgrade    = false;
+    this.pendingLevelUpUpgrade = false;
+
+    this.time.delayedCall(250, () => {
+      this.showFloorClearOverlay(floor);
+      this.time.delayedCall(800, () => {
+        if (doUpgrade)       this.launchUpgradeScreen();
+        else if (isRelicFloor) this.launchRelicScreen();
+        else                 this.advanceFloor();
+      });
+    });
+  }
+
+  private launchUpgradeScreen(): void {
+    const classWeights = this.currentClass?.categoryWeights;
+    // Determine context label: boss reward > level-up > floor (Boss Rush fallback)
+    const isBossReward = this.enemy?.isBoss ?? false;
+    const level        = this.xpManager.currentLevel;
+    const contextLabel = isBossReward
+      ? '⚔  Boss Reward'
+      : level > 0
+        ? `★  Level ${level} — Choose an Upgrade`
+        : `Floor ${this.floorManager.currentFloor} cleared`;
+
+    const upgradePicks = pickRunUpgrades(3, this.floorManager.currentFloor, this.owned, classWeights);
+    const data: UpgradeSceneData = {
+      playerStats:   this.player.stats,
+      engine:        this.engine,
+      upgrades:      upgradePicks,
+      ownedUpgrades: this.owned,
+      floor:         this.floorManager.currentFloor,
+      context:       contextLabel,
+    };
+    // Bridge: emit upgrade available (HTML modal will listen here in M8)
+    bus.emit({ type: 'upgrade:available', payload: {
+      upgrades:     upgradePicks,
+      contextLabel,
+      floor:        this.floorManager.currentFloor,
+    }});
+    this.events.once(Phaser.Scenes.Events.RESUME, (_scene: unknown, resumeData: { upgraded?: boolean }) => {
+      // Momentum Stone relic: +5 max HP per upgrade taken
+      if (resumeData?.upgraded && this.engine.hasUpgrade('relic_momentum_stone')) {
+        this.player.stats.maxHp += 5;
+        this.player.stats.hp    = Math.min(this.player.stats.hp + 5, this.player.stats.maxHp);
+      }
+      // Boss Rush: relic floor fires on the same cadence as the upgrade draft
+      // (every 3 bosses). Chain the relic screen before advancing.
+      const { rules } = getRunConfig();
+      if (rules.bossesOnly) {
+        this.launchRelicScreen();
+      } else {
+        this.advanceFloor();
+      }
+    });
+    this.scene.launch('UpgradeScene', data);
+    this.scene.pause();
+  }
+
+  private launchRelicScreen(): void {
+    const relics = pickRelics(3, this.floorManager.currentFloor, this.ownedRelics);
+    if (relics.length === 0) {
+      this.advanceFloor();
+      return;
+    }
+    const data: RelicSceneData = {
+      playerStats:  this.player.stats,
+      engine:       this.engine,
+      relics,
+      ownedRelics:  this.ownedRelics,
+      floor:        this.floorManager.currentFloor,
+    };
+    // Bridge: emit relic available (HTML modal will listen here in M9)
+    bus.emit({ type: 'relic:available', payload: {
+      relics,
+      floor: this.floorManager.currentFloor,
+    }});
+    this.events.once(Phaser.Scenes.Events.RESUME, () => {
+      this.updateRelicHud();
+      this.advanceFloor();
+    });
+    this.scene.launch('RelicScene', data);
+    this.scene.pause();
+  }
+
+  private advanceFloor(): void {
+    this.floorManager.advance();
+    // Boss Rush: always spawn a boss regardless of floor number
+    const { rules } = getRunConfig();
+    const config = rules.bossesOnly
+      ? this.floorManager.buildBossConfig()
+      : this.floorManager.buildEnemyConfig();
+    const mod    = this.floorManager.currentModifier;
+
+    this.enemy.destroy();
+    this.enemy = new Enemy(this, ENEMY_X, COMBAT_Y, config);
+
+    this.updateModifierLabel();
+    this.hideOverlay();
+
+    // ── Special floors: skip combat ────────────────────────────────────────
+    if (mod?.skipCombat) {
+      this.state = 'special_floor';
+      if (mod.specialType === 'merchant') {
+        this.launchMerchantScene();
+      } else {
+        // Treasure floor
+        this.showTreasureOverlay(mod);
+      }
+      return;
+    }
+
+    // Apply kill carryover (Plague Carrier, Backdraft, Bomb Collar blast)
+    this.engine.applyKillCarryover(this.enemy);
+    const bombData = this.engine.getRelicData('bomb_collar');
+    if (bombData['pendingBlast']) {
+      const blast = bombData['pendingBlast'] as number;
+      this.enemy.takeDamage(blast);
+      this.spawnFloater(this.enemy.x, this.enemy.y - 30, blast, 'area');
+      bombData['pendingBlast'] = 0;
+    }
+
+    this.engine.onFloorStart(mod);
+
+    // ── Nightmare modifier: player starts at 50% HP ────────────────────────
+    if (this.engine.nightmareActive) {
+      this.player.stats.hp = Math.max(1, Math.floor(this.player.stats.maxHp * 0.5));
+      this.player.takeDamage(0); // refresh health bar
+    }
+
+    // ── Sanctified modifier: player heals 30% max HP ──────────────────────
+    if (this.engine.sanctifiedActive) {
+      const healAmt = Math.floor(this.player.stats.maxHp * 0.3);
+      const gained  = this.player.heal(healAmt);
+      if (gained > 0) this.spawnFloater(this.player.x, this.player.y - 30, gained, 'heal');
+    }
+
+    // ── Constricting modifier: lose 25% of current HP on entry ────────────
+    if (this.engine.activeModifier === 'constricting') {
+      const penalty = Math.max(1, Math.floor(this.player.stats.hp * 0.25));
+      this.player.takeDamage(penalty);
+      this.spawnFloater(this.player.x, this.player.y - 20, penalty, 'damage');
+      if (this.player.isDead() && !this.engine.checkPhoenix()) {
+        this.transition('player_dead');
+        return;
+      } else if (this.player.isDead()) {
+        this.player.stats.hp = 1;
+      }
+    }
+
+    if (config.isBoss) this.announceBoss(config.bossLabel);
+    else               this.announceFloor();
+
+    // Bridge: track enemy name (Enemy class doesn't expose it)
+    this.currentEnemyName = config.isBoss ? (config.bossLabel ?? 'BOSS') : 'ENEMY';
+
+    this.state = 'fighting';
+
+    // Bridge: floor + enemy state changed
+    this.syncRunState();
+  }
+
+  // ── Treasure floor ───────────────────────────────────────────────────────
+
+  private showTreasureOverlay(mod: import('../floors/FloorModifier').FloorModifier): void {
+    this.overlay.removeAll(true);
+
+    const gold = mod.bonusRewards?.gold ?? 40;
+    this.engine.addGold(gold);
+
+    const bg = this.add.graphics();
+    bg.fillStyle(0x000000, 0.85);
+    bg.fillRoundedRect(-190, -120, 380, 240, 10);
+    bg.lineStyle(2, 0xffd700);
+    bg.strokeRoundedRect(-190, -120, 380, 240, 10);
+
+    const title = this.add.text(0, -86, '✦  TREASURE ROOM  ✦', {
+      fontSize: '22px', color: '#ffd700',
+      fontFamily: 'monospace', fontStyle: 'bold',
+    }).setOrigin(0.5);
+
+    const goldText = this.add.text(0, -44, `+${gold} GOLD`, {
+      fontSize: '18px', color: '#ffd700', fontFamily: 'monospace',
+    }).setOrigin(0.5);
+
+    const hintText = this.add.text(0, -10, 'Bonus upgrade awaits…', {
+      fontSize: '12px', color: '#888899', fontFamily: 'monospace',
+    }).setOrigin(0.5);
+
+    // Claim button
+    const btnBg = this.add.graphics();
+    btnBg.fillStyle(0x1a3a1a);
+    btnBg.fillRoundedRect(-80, 30, 160, 44, 8);
+    btnBg.lineStyle(2, 0x2ecc71);
+    btnBg.strokeRoundedRect(-80, 30, 160, 44, 8);
+
+    const btnLabel = this.add.text(0, 52, 'CLAIM REWARD', {
+      fontSize: '13px', color: '#2ecc71',
+      fontFamily: 'monospace', fontStyle: 'bold',
+    }).setOrigin(0.5);
+
+    const zone = this.add.zone(0, 52, 160, 44).setInteractive({ cursor: 'pointer' });
+    zone.on('pointerdown', () => {
+      this.overlay.removeAll(true);
+      this.overlay.setVisible(false);
+      this.spawnFloater(this.enemy.x, this.enemy.y - 30, gold, 'gold');
+      this.launchUpgradeScreen();
+    });
+
+    this.overlay.add([bg, title, goldText, hintText, btnBg, btnLabel, zone]);
+    this.overlay.setVisible(true).setAlpha(0);
+    this.tweens.add({ targets: this.overlay, alpha: 1, duration: 300 });
+  }
+
+  // ── Merchant floor ───────────────────────────────────────────────────────
+
+  private launchMerchantScene(): void {
+    const floor = this.floorManager.currentFloor;
+    const merchantOffers = pickRunUpgrades(3, floor, this.owned);
+    const data = {
+      playerStats:   this.player.stats,
+      engine:        this.engine,
+      ownedUpgrades: this.owned,
+      floor,
+    };
+    // Bridge: emit merchant available (HTML modal will listen here in M9)
+    bus.emit({ type: 'merchant:available', payload: {
+      upgradeCards: merchantOffers,
+      consumables:  [],   // populated in M9 when MerchantModal is built
+      rerollCost:   15,
+      floor,
+    }});
+    this.events.once(Phaser.Scenes.Events.RESUME, () => {
+      this.advanceFloor(); // advance past merchant floor into next combat floor
+    });
+    this.scene.launch('MerchantScene', data);
+    this.scene.pause();
+  }
+
+  private onPlayerDead(): void {
+    // Clear any residual boss label so it doesn't linger on the game-over overlay
+    this.currentEnemyName = 'ENEMY';
+    const floor       = this.floorManager.currentFloor;
+    const goldEarned  = MetaService.earnedForFloor(floor);
+    const durationMs  = Date.now() - this.runStartTime;
+
+    // ── Legacy meta progression (currency, permanent upgrades) ────────────
+    metaService.recordRunEnd({ floor, kills: this.killCount, bossesDefeated: this.bossKillCount, goldEarned });
+
+    // ── Platform run record ───────────────────────────────────────────────
+    const profile  = ServiceLocator.profile.getProfile();
+    const cfg = getRunConfig();
+    // Mode-aware score formula
+    const score = cfg.modeId === 'boss_rush'
+      ? this.bossKillCount * 100 + Math.floor(this.engine.totalDamageDealt / 10)
+      : floor * 10 + this.killCount;
+
+    const run: RunResultDTO = {
+      id:              this.generateRunId(),
+      player_id:       profile?.id ?? 'local',
+      mode_id:         cfg.modeId,
+      class_id:        this.currentClass?.id ?? 'unknown',
+      floor_reached:   floor,
+      score,
+      build_archetype: this.detectBuildName(),
+      relics_owned:    [...this.ownedRelics],
+      keystone_owned:  this.detectKeystone(),
+      kills:           this.killCount,
+      bosses_killed:   this.bossKillCount,
+      damage_dealt:    this.engine.totalDamageDealt,
+      healing_done:    this.engine.totalHealingDone,
+      highest_hit:     this.engine.highestDamageHit,
+      duration_ms:     durationMs,
+      date:            new Date().toISOString(),
+      won:             floor >= 20,
+    };
+
+    const { newTitles } = ServiceLocator.profile.recordRunEnd(run);
+    ServiceLocator.history.addRun(run);
+
+    // Bridge: run ended — HTML GameOverModal listens here in M10
+    bus.emit({ type: 'run:ended', payload: { result: run } });
+    // Bridge: mark run as inactive and sync final state
+    runState.update({ isRunActive: false });
+
+    this.showGameOverOverlay(floor, goldEarned, newTitles);
+    this.input.keyboard?.once('keydown-R', () => this.scene.start('HomeScene'));
+  }
+
+  private generateRunId(): string {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID();
+    }
+    return `run_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+  }
+
+  private detectKeystone(): string | null {
+    for (const [id] of this.owned) {
+      const upg = ALL_UPGRADES.find(u => u.id === id && u.tier === 'keystone');
+      if (upg) return upg.name;
+    }
+    return null;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Scene construction
+  // ---------------------------------------------------------------------------
+
+  // ── Mode rule application ────────────────────────────────────────────────────
+
+  private applyModeRules(): void {
+    const { modeId, rules } = getRunConfig();
+
+    // One HP: override player stats before HUD reads them
+    if (rules.maxHpOverride !== null) {
+      this.player.stats.maxHp = rules.maxHpOverride;
+      this.player.stats.hp    = rules.maxHpOverride;
+    }
+    // Disable lifesteal (One HP mode — healing is a no-op at max=1 anyway,
+    // but disabling explicitly prevents shield generation from Overcharge)
+    if (rules.disableLifesteal) {
+      this.player.stats.lifesteal = 0;
+    }
+    // Starting gold (Warlock class already gives 30 via class apply; this
+    // is for future modes that grant gold)
+    if (rules.startingGold > 0) {
+      this.engine.addGold(rules.startingGold);
+    }
+    // Chaos mode: grant random relics before floor 1
+    if (rules.forceRandomRelics > 0) {
+      this.grantRandomRelics(rules.forceRandomRelics);
+    }
+
+    // Store mode ID so run results carry the right leaderboard target
+    void modeId; // used via getRunConfig() in onPlayerDead
+  }
+
+  /** Grant N random relics from the pool (used for Chaos mode). */
+  private grantRandomRelics(count: number): void {
+    const available = ALL_RELICS.filter(r => !this.ownedRelics.has(r.id));
+    const picks     = [...available].sort(() => Math.random() - 0.5).slice(0, count);
+    picks.forEach(relic => {
+      relic.onAcquire(this.player.stats, this.engine);
+      this.engine.registerRelic(relic.id);
+      this.engine.registerUpgrade(relic.id);
+      this.ownedRelics.add(relic.id);
+    });
+  }
+
+  private createEntities(): void {
+    this.player = new Player(this, PLAYER_X, COMBAT_Y);
+
+    // Nightmare: skip permanent upgrade bonuses so meta progression has no effect
+    if (!getRunConfig().rules.noMetaBonuses) {
+      metaService.applyBonus(this.player.stats);
+    }
+
+    this.engine = new RulesEngine(this.player.stats);
+
+    this.enemy = new Enemy(this, ENEMY_X, COMBAT_Y, this.floorManager.buildEnemyConfig());
+  }
+
+  private drawBackground(): void {
+    const g = this.add.graphics();
+
+    // Base background
+    g.fillStyle(0x0d0d1f);
+    g.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+
+    // Top bar surface
+    g.fillStyle(0x0c0c1e);
+    g.fillRect(0, 0, GAME_WIDTH, HEADER_H);
+    g.lineStyle(1, 0x1e1e36);
+    g.lineBetween(0, HEADER_H, GAME_WIDTH, HEADER_H);
+
+    // Bottom info bar surface
+    g.fillStyle(0x0b0b1c);
+    g.fillRect(0, BOT_BAR_Y, GAME_WIDTH, GAME_HEIGHT - BOT_BAR_Y);
+    g.lineStyle(1, 0x1a1a30);
+    g.lineBetween(0, BOT_BAR_Y, GAME_WIDTH, BOT_BAR_Y);
+
+    // Subtle arena ground line
+    g.lineStyle(1, 0x1e1e36);
+    g.lineBetween(16, COMBAT_Y + 44, GAME_WIDTH - 16, COMBAT_Y + 44);
+
+    // Player / enemy zone divider (very subtle)
+    g.lineStyle(1, 0x111120);
+    g.lineBetween(GAME_WIDTH / 2, HP_PANEL_Y + HP_PANEL_H + 4, GAME_WIDTH / 2, BOT_BAR_Y - 4);
+  }
+
+  // BUG #3: speed controls affect ONLY simulation time scaling (gameSpeed).
+  // They must NEVER touch s.attackSpeed or any engine stat.
+  // playerSpeedMultiplier is a floor-modifier stat effect — separate concern.
+  private setGameSpeed(speed: 1 | 1.5 | 2): void {
+    this.gameSpeed = speed;
+    // Bridge: speed changed — HTML HUD speed buttons update via runState
+    runState.update({ gameSpeed: speed });
+  }
+
+  private refreshHpTexts(): void {
+    // Bridge: push live HP + enemy status so HTML HUD stays in sync
+    this.syncRunState();
+  }
+
+  private updateModifierLabel(): void {
+    this.syncRunState();
+  }
+
+  private updateRelicHud(): void {
+    // Bridge: relic count changed
+    this.syncRunState();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Overlays
+  // ---------------------------------------------------------------------------
+
+  private createOverlay(): void {
+    this.overlay = this.add.container(GAME_WIDTH / 2, GAME_HEIGHT / 2);
+    this.overlay.setVisible(false);
+  }
+
+  private showFloorClearOverlay(floor: number): void {
+    this.overlay.removeAll(true);
+
+    const bg = this.add.graphics();
+    bg.fillStyle(0x000000, 0.82);
+    bg.fillRect(-GAME_WIDTH / 2, -GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT);
+
+    const cleared = this.add.text(0, -52, 'FLOOR CLEARED', {
+      fontSize: '40px', color: '#2ecc71',
+      fontFamily: 'monospace', fontStyle: 'bold',
+      stroke: '#0a1a0a', strokeThickness: 4,
+    }).setOrigin(0.5);
+
+    const rule = this.add.graphics();
+    rule.lineStyle(1, 0x1a6a3a);
+    rule.lineBetween(-160, -80, 160, -80);
+
+    const sub = this.add.text(0, 18, `Floor ${floor}`, {
+      fontSize: '22px', color: '#5a5a88', fontFamily: 'monospace',
+    }).setOrigin(0.5);
+
+    this.overlay.add([bg, rule, cleared, sub]);
+    this.overlay.setVisible(true).setAlpha(0);
+    this.tweens.add({ targets: this.overlay, alpha: 1, duration: 300, ease: 'Power2' });
+  }
+
+  private showGameOverOverlay(floor: number, earned: number, newTitles: string[] = []): void {
+    this.overlay.removeAll(true);
+
+    const PW = 320; const PH = 340;
+    const hx = -PW / 2; const hy = -PH / 2;
+
+    const bg = this.add.graphics();
+    bg.fillStyle(0x000000, 0.88);
+    bg.fillRoundedRect(hx, hy, PW, PH, 10);
+    bg.lineStyle(1, 0x252540);
+    bg.strokeRoundedRect(hx, hy, PW, PH, 10);
+
+    const title = this.add.text(0, hy + 22, 'GAME OVER', {
+      fontSize: '26px', color: '#e74c3c', fontFamily: 'monospace', fontStyle: 'bold',
+    }).setOrigin(0.5);
+
+    // Build identity line
+    const buildName = this.detectBuildName();
+    const classLine = this.currentClass
+      ? `${this.currentClass.icon}  ${this.currentClass.name.toUpperCase()}  ·  ${buildName}`
+      : buildName;
+    const classText = this.add.text(0, hy + 56, classLine, {
+      fontSize: '10px', color: '#9b59b6', fontFamily: 'monospace',
+    }).setOrigin(0.5);
+
+    // Divider
+    const div1 = this.add.graphics();
+    div1.lineStyle(1, 0x1a1a30);
+    div1.lineBetween(hx + 16, hy + 72, hx + PW - 16, hy + 72);
+
+    // Primary stat: "Bosses Cleared" for Boss Rush, "Floor reached" for all others
+    const { modeId: deadModeId } = getRunConfig();
+    const primaryLabel = deadModeId === 'boss_rush' ? 'BOSSES CLEARED' : 'FLOOR';
+    const primaryValue = deadModeId === 'boss_rush' ? `${this.bossKillCount}` : `${floor}`;
+    const floorLabel = this.add.text(-60, hy + 98, primaryLabel, {
+      fontSize: '9px', color: '#555577', fontFamily: 'monospace',
+    }).setOrigin(0, 0.5);
+    const floorNum = this.add.text(-60, hy + 116, primaryValue, {
+      fontSize: '28px', color: '#e0e0e0', fontFamily: 'monospace', fontStyle: 'bold',
+    }).setOrigin(0, 0);
+
+    const bestFloor = metaService.highestFloor;
+    const bestLabel = this.add.text(60, hy + 98, 'BEST', {
+      fontSize: '9px', color: '#333355', fontFamily: 'monospace',
+    }).setOrigin(0, 0.5);
+    const bestNum = this.add.text(60, hy + 116, `${bestFloor}`, {
+      fontSize: '28px', color: '#333355', fontFamily: 'monospace', fontStyle: 'bold',
+    }).setOrigin(0, 0);
+
+    const div2 = this.add.graphics();
+    div2.lineStyle(1, 0x1a1a30);
+    div2.lineBetween(hx + 16, hy + 152, hx + PW - 16, hy + 152);
+
+    // Combat stats row
+    const statY = hy + 166;
+    const statTexts = [
+      [`${this.killCount}`, 'KILLS'],
+      [`${this.bossKillCount}`, 'BOSSES'],
+      [`${this.engine.highestDamageHit}`, 'TOP HIT'],
+      [`${this.engine.totalHealingDone}`, 'HEALED'],
+    ];
+    const colW = PW / 4;
+    const statObjs: Phaser.GameObjects.Text[] = [];
+    statTexts.forEach(([val, lbl], i) => {
+      const cx = hx + colW * i + colW / 2;
+      statObjs.push(
+        this.add.text(cx, statY,      val, { fontSize: '14px', color: '#e0e0e0', fontFamily: 'monospace', fontStyle: 'bold' }).setOrigin(0.5, 0),
+        this.add.text(cx, statY + 18, lbl, { fontSize: '8px',  color: '#555577', fontFamily: 'monospace' }).setOrigin(0.5, 0),
+      );
+    });
+
+    const div3 = this.add.graphics();
+    div3.lineStyle(1, 0x1a1a30);
+    div3.lineBetween(hx + 16, hy + 206, hx + PW - 16, hy + 206);
+
+    // Relics
+    const relicNames = [...this.ownedRelics]
+      .map(id => { const d = ALL_RELICS.find(r => r.id === id); return d ? d.name : id; })
+      .join('  ·  ');
+    const relicText = relicNames
+      ? this.add.text(0, hy + 220, `◈  ${relicNames}`, { fontSize: '8px', color: '#ffd700', fontFamily: 'monospace', wordWrap: { width: PW - 32 }, align: 'center' }).setOrigin(0.5, 0)
+      : this.add.text(0, hy + 220, 'No relics found', { fontSize: '8px', color: '#333355', fontFamily: 'monospace' }).setOrigin(0.5, 0);
+
+    const div4 = this.add.graphics();
+    div4.lineStyle(1, 0x1a1a30);
+    div4.lineBetween(hx + 16, hy + 248, hx + PW - 16, hy + 248);
+
+    // Currency earned
+    const earnedLabel = this.add.text(-20, hy + 264, 'EARNED', { fontSize: '8px', color: '#555577', fontFamily: 'monospace' }).setOrigin(1, 0.5);
+    const earnedVal   = this.add.text(-14, hy + 264, `+${earned} ★`, { fontSize: '13px', color: '#ffd700', fontFamily: 'monospace', fontStyle: 'bold' }).setOrigin(0, 0.5);
+
+    const hint = this.add.text(0, hy + PH - 22, 'Press R to return to hub', {
+      fontSize: '9px', color: '#333355', fontFamily: 'monospace',
+    }).setOrigin(0.5);
+
+    const allObjs: Phaser.GameObjects.GameObject[] = [
+      bg, title, classText, div1,
+      floorLabel, floorNum, bestLabel, bestNum, div2,
+      ...statObjs, div3, relicText, div4,
+      earnedLabel, earnedVal, hint,
+    ];
+
+    // ── Milestone unlock banner ────────────────────────────────────────────
+    if (newTitles.length > 0) {
+      const titleName = newTitles[0]; // show first unlock
+      const unlockBg = this.add.graphics();
+      unlockBg.fillStyle(0x0d2a18);
+      unlockBg.fillRoundedRect(-150, hy + PH - 56, 300, 26, 4);
+      unlockBg.lineStyle(1, 0x2ecc71);
+      unlockBg.strokeRoundedRect(-150, hy + PH - 56, 300, 26, 4);
+      const unlockText = this.add.text(0, hy + PH - 43, `✦ Title unlocked: ${titleName}`, {
+        fontSize: '10px', color: '#2ecc71', fontFamily: 'monospace', fontStyle: 'bold',
+      }).setOrigin(0.5);
+      allObjs.push(unlockBg, unlockText);
+    }
+
+    this.overlay.add(allObjs);
+    this.overlay.setVisible(true).setAlpha(0);
+    this.tweens.add({ targets: this.overlay, alpha: 1, duration: 300 });
+  }
+
+  /** Detect the player's build archetype from owned upgrades. */
+  private detectBuildName(): string {
+    // Simpler: count by tag occurrence across owned upgrade IDs
+    const poisonIds  = ['venom_tips','toxic_coating','plague_carrier','reactive_venom','poison_lord'];
+    const critIds    = ['eagle_eye','precision','predators_mark','speed_to_crit','eternal_crit'];
+    const lightIds   = ['static_charge','spark','overload','ball_lightning','thunder_engine'];
+    const burnIds    = ['kindling','igniter','backdraft','conflagration','spontaneous_combustion','phoenix_protocol'];
+    const summonIds  = ['familiar','pack_leader','coordinated_strike','lich_form'];
+    const defIds     = ['iron_skin','reactive_plating','living_wall','diamond_body'];
+
+    const count = (ids: string[]) => ids.filter(id => (this.owned.get(id) ?? 0) > 0).length;
+    const p = count(poisonIds), c = count(critIds), l = count(lightIds),
+          b = count(burnIds),   s = count(summonIds), d = count(defIds);
+
+    if (p >= 3 && c >= 2) return 'Toxic Criticals';
+    if (p >= 3)            return 'Endless Plague';
+    if (c >= 3)            return 'Critical Strike';
+    if (l >= 3)            return 'Lightning Storm';
+    if (b >= 3)            return 'Pyromaniac';
+    if (s >= 2)            return 'Battle Commander';
+    if (d >= 3)            return 'Iron Fortress';
+    return 'Mixed Build';
+  }
+
+  private hideOverlay(): void {
+    this.tweens.killTweensOf(this.overlay);
+    this.overlay.setVisible(false);
+    this.overlay.setAlpha(1);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Bridge helpers
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Push a full snapshot of the current run state to RunStateStore.
+   * Called after any state change that the HTML HUD needs to reflect.
+   * Safe to call frequently — RunStateStore only notifies subscribers
+   * when a selected value actually changes.
+   */
+  private syncRunState(): void {
+    const mod = this.floorManager.currentModifier;
+    const ps  = this.enemy?.statusEffects.poison;
+    const bs  = this.enemy?.statusEffects.burn;
+    const cfg = getRunConfig();
+
+    runState.update({
+      isRunActive: true,
+      floor:       this.floorManager.currentFloor,
+      isBoss:      this.enemy?.isBoss ?? false,
+
+      modifierName: mod && !mod.skipCombat ? mod.name        : '',
+      modifierDesc: mod && !mod.skipCombat ? mod.description : '',
+
+      playerHp:       this.player.stats.hp,
+      playerMaxHp:    this.player.stats.maxHp,
+      playerLevel:    this.xpManager.currentLevel,
+      playerXp:       Math.round(this.xpManager.xpProgress * 100),
+      playerXpNeeded: 100,
+      className:      this.currentClass?.name ?? '',
+      classId:        this.currentClass?.id   ?? '',
+
+      enemyHp:           this.enemy?.stats.hp      ?? 0,
+      enemyMaxHp:        this.enemy?.stats.maxHp   ?? 0,
+      enemyName:         this.currentEnemyName,
+      enemyPoisonStacks: ps?.stacks ?? 0,
+      enemyBurnStacks:   (bs && bs.durationMs > 0) ? 1 : 0,
+
+      gold:       this.engine.gold,
+
+      keystoneName: this.detectKeystone() ?? '',
+      keystoneId:   this.detectKeystoneId(),
+      relicCount:   this.ownedRelics.size,
+      buildArchetype:    this.detectBuildName(),
+      categoryBreakdown: this.computeCategoryBreakdown(),
+
+      gameSpeed: this.gameSpeed,
+      modeId:    cfg.modeId,
+    });
+  }
+
+  /** Returns the ID of the keystone upgrade the player currently holds. */
+  private detectKeystoneId(): string {
+    for (const [id] of this.owned) {
+      const upg = ALL_UPGRADES.find(u => u.id === id && u.tier === 'keystone');
+      if (upg) return upg.id;
+    }
+    return '';
+  }
+
+  /**
+   * Counts total stacks per upgrade category.
+   * Used by the Build Fingerprint in the right HUD rail and Build Inspector.
+   */
+  private computeCategoryBreakdown(): Record<string, number> {
+    const breakdown: Record<string, number> = {};
+    for (const [id, stacks] of this.owned) {
+      const upg = ALL_UPGRADES.find(u => u.id === id);
+      if (upg) {
+        breakdown[upg.category] = (breakdown[upg.category] ?? 0) + stacks;
+      }
+    }
+    return breakdown;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Announcements
+  // ---------------------------------------------------------------------------
+
+  private announceFloor(): void {
+    const mod = this.floorManager.currentModifier;
+    const label = mod
+      ? `FLOOR ${this.floorManager.currentFloor}  ${mod.name}`
+      : `FLOOR ${this.floorManager.currentFloor}`;
+    const color = mod ? intToHex(mod.color) : '#ffffff';
+
+    const text = this.add
+      .text(GAME_WIDTH / 2, COMBAT_Y - 90, label, {
+        fontSize: '26px', color, fontFamily: 'monospace', fontStyle: 'bold',
+        stroke: '#000000', strokeThickness: 4,
+      })
+      .setOrigin(0.5).setAlpha(0);
+    this.tweens.add({ targets: text, alpha: 1, duration: 250, yoyo: true, hold: 600, onComplete: () => text.destroy() });
+  }
+
+  private announceBoss(bossLabel: string): void {
+    const card = this.add.container(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 60);
+    const bg   = this.add.graphics();
+    bg.fillStyle(0x000000, 0.72);
+    bg.fillRoundedRect(-150, -44, 300, 88, 8);
+    bg.lineStyle(1, 0x9b59b6);
+    bg.strokeRoundedRect(-150, -44, 300, 88, 8);
+
+    const warning = this.add.text(0, -18, '⚠  BOSS ENCOUNTER', { fontSize: '12px', color: '#e74c3c', fontFamily: 'monospace', fontStyle: 'bold' }).setOrigin(0.5);
+    const name    = this.add.text(0,  14, bossLabel,            { fontSize: '20px', color: '#9b59b6', fontFamily: 'monospace', fontStyle: 'bold' }).setOrigin(0.5);
+
+    card.add([bg, warning, name]);
+    card.setAlpha(0);
+    this.tweens.add({ targets: card, alpha: 1, duration: 300, yoyo: true, hold: 1800, onComplete: () => card.destroy() });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Floating damage numbers
+  // ---------------------------------------------------------------------------
+
+  private spawnFloater(x: number, y: number, value: number, type: FloaterType): void {
+    if (value <= 0) return;
+
+    const cfg: Record<FloaterType, { color: string; size: string }> = {
+      damage:    { color: '#ffffff', size: '14px' },
+      crit:      { color: '#FFD700', size: '22px' },   // crits are visually distinct: larger + gold
+      heal:      { color: '#2ecc71', size: '14px' },
+      poison:    { color: '#9b59b6', size: '12px' },
+      burn:      { color: '#e67e22', size: '12px' },
+      lightning: { color: '#3498db', size: '14px' },
+      area:      { color: '#bdc3c7', size: '11px' },
+      reflect:   { color: '#95a5a6', size: '11px' },
+      summon:    { color: '#4fc3f7', size: '12px' },
+      gold:      { color: '#ffd700', size: '13px' },
+      shield:    { color: '#5dade2', size: '13px' },
+    };
+
+    const { color, size } = cfg[type];
+    const prefix = (type === 'heal' || type === 'gold' || type === 'shield') ? '+' : '';
+
+    const label = this.add
+      .text(
+        x + Phaser.Math.Between(-12, 12),
+        y,
+        `${prefix}${value}`,
+        {
+          fontSize: size,
+          color,
+          fontFamily: 'monospace',
+          fontStyle:  type === 'crit' ? 'bold' : 'normal',
+          stroke: '#000000',
+          strokeThickness: 3,
+        },
+      )
+      .setOrigin(0.5);
+
+    this.tweens.add({
+      targets: label, y: label.y - 50, alpha: 0,
+      duration: 900, ease: 'Power1',
+      onComplete: () => label.destroy(),
+    });
+  }
+}
+
+function intToHex(color: number): string {
+  return `#${color.toString(16).padStart(6, '0')}`;
+}
+

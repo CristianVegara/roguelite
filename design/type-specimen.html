@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Type Specimen — Tower Roguelite</title>
+  <link rel="stylesheet" href="../src/styles/tokens.css"/>
+  <style>
+    body {
+      background: var(--bg-base);
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+      padding: 40px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    h1 {
+      font-size: var(--text-title);
+      font-weight: var(--weight-title);
+      letter-spacing: var(--ls-title);
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+    .meta {
+      font-size: var(--text-caption);
+      color: var(--text-muted);
+      letter-spacing: var(--ls-caption);
+      text-transform: uppercase;
+      margin-bottom: 40px;
+    }
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border-subtle);
+      margin: 32px 0;
+    }
+    .section-label {
+      font-size: var(--text-label);
+      font-weight: var(--weight-label);
+      letter-spacing: var(--ls-label);
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+    /* ── Type specimen row ── */
+    .specimen-row {
+      display: flex;
+      align-items: baseline;
+      gap: 24px;
+      margin-bottom: 24px;
+      padding: 16px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+    }
+    .specimen-meta {
+      flex-shrink: 0;
+      width: 140px;
+    }
+    .specimen-token {
+      font-size: var(--text-label);
+      font-weight: var(--weight-label);
+      color: var(--accent-primary);
+      letter-spacing: var(--ls-label);
+    }
+    .specimen-size {
+      font-size: var(--text-caption);
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+    .specimen-text {
+      flex: 1;
+    }
+    /* ── Levels ── */
+    .t-display {
+      font-size: var(--text-display);
+      font-weight: var(--weight-display);
+      line-height: var(--lh-display);
+      letter-spacing: var(--ls-display);
+      color: var(--text-primary);
+    }
+    .t-title {
+      font-size: var(--text-title);
+      font-weight: var(--weight-title);
+      line-height: var(--lh-title);
+      letter-spacing: var(--ls-title);
+      color: var(--text-primary);
+    }
+    .t-heading {
+      font-size: var(--text-heading);
+      font-weight: var(--weight-heading);
+      line-height: var(--lh-heading);
+      letter-spacing: var(--ls-heading);
+      color: var(--text-primary);
+    }
+    .t-body {
+      font-size: var(--text-body);
+      font-weight: var(--weight-body);
+      line-height: var(--lh-body);
+      color: var(--text-primary);
+    }
+    .t-label {
+      font-size: var(--text-label);
+      font-weight: var(--weight-label);
+      line-height: var(--lh-label);
+      letter-spacing: var(--ls-label);
+      color: var(--text-secondary);
+      text-transform: uppercase;
+    }
+    .t-caption {
+      font-size: var(--text-caption);
+      font-weight: var(--weight-caption);
+      line-height: var(--lh-caption);
+      letter-spacing: var(--ls-caption);
+      color: var(--text-muted);
+    }
+    .t-stat {
+      font-size: var(--text-stat);
+      font-weight: var(--weight-stat);
+      line-height: var(--lh-stat);
+      letter-spacing: var(--ls-stat);
+      font-variant-numeric: tabular-nums;
+      color: var(--text-primary);
+    }
+    /* ── Tabular nums showcase ── */
+    .tabular-row {
+      display: flex;
+      gap: 32px;
+      align-items: center;
+      padding: 16px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      margin-bottom: 16px;
+    }
+    .tabular-col {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .tabular-label {
+      font-size: var(--text-caption);
+      color: var(--text-muted);
+      letter-spacing: var(--ls-caption);
+      text-transform: uppercase;
+    }
+    /* ── Colour role grid ── */
+    .colour-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+    .colour-chip {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+    }
+    .colour-swatch {
+      width: 24px;
+      height: 24px;
+      border-radius: var(--radius-sm);
+      flex-shrink: 0;
+    }
+    .colour-info {}
+    .colour-name {
+      font-size: var(--text-label);
+      font-weight: var(--weight-label);
+      color: var(--text-primary);
+      letter-spacing: var(--ls-label);
+    }
+    .colour-var {
+      font-size: var(--text-caption);
+      color: var(--text-muted);
+      letter-spacing: var(--ls-caption);
+      margin-top: 2px;
+    }
+    /* ── Rarity showcase ── */
+    .rarity-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 24px;
+    }
+    .rarity-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: var(--radius-md);
+      font-size: var(--text-label);
+      font-weight: var(--weight-label);
+      letter-spacing: var(--ls-label);
+      text-transform: uppercase;
+    }
+    .rarity-common    { background: var(--bg-raised); border: 1px solid var(--rarity-common-border);    color: var(--rarity-common-color);    box-shadow: var(--rarity-common-glow); }
+    .rarity-rare      { background: var(--bg-raised); border: 1px solid var(--rarity-rare-border);      color: var(--rarity-rare-color);      box-shadow: var(--rarity-rare-glow); }
+    .rarity-epic      { background: var(--bg-raised); border: 1px solid var(--rarity-epic-border);      color: var(--rarity-epic-color);      box-shadow: var(--rarity-epic-glow); }
+    .rarity-legendary { background: var(--bg-raised); border: 1px solid var(--rarity-legendary-border); color: var(--rarity-legendary-color); box-shadow: var(--rarity-legendary-glow); }
+    /* ── Spacing ruler ── */
+    .spacing-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+    .spacing-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .spacing-bar {
+      background: var(--accent-primary);
+      height: 8px;
+      border-radius: var(--radius-sm);
+      flex-shrink: 0;
+    }
+    .spacing-token {
+      font-size: var(--text-caption);
+      color: var(--text-muted);
+      width: 80px;
+      flex-shrink: 0;
+    }
+    .spacing-value {
+      font-size: var(--text-caption);
+      color: var(--accent-primary);
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Type Specimen</h1>
+  <p class="meta">Tower Roguelite · Design System Reference · Not part of game build</p>
+
+  <!-- ════════════════════════════════════════════════════════════════════════
+       TYPE SCALE
+       ════════════════════════════════════════════════════════════════════════ -->
+  <p class="section-label">Type Scale — 7 Levels</p>
+
+  <div class="specimen-row">
+    <div class="specimen-meta">
+      <div class="specimen-token">--text-display</div>
+      <div class="specimen-size">2rem · 32px · 800</div>
+    </div>
+    <div class="specimen-text t-display">FLOOR CLEARED</div>
+  </div>
+
+  <div class="specimen-row">
+    <div class="specimen-meta">
+      <div class="specimen-token">--text-title</div>
+      <div class="specimen-size">1.375rem · 22px · 700</div>
+    </div>
+    <div class="specimen-text t-title">Choose Your Class</div>
+  </div>
+
+  <div class="specimen-row">
+    <div class="specimen-meta">
+      <div class="specimen-token">--text-heading</div>
+      <div class="specimen-size">1rem · 16px · 700</div>
+    </div>
+    <div class="specimen-text t-heading">Permanent Upgrades</div>
+  </div>
+
+  <div class="specimen-row">
+    <div class="specimen-meta">
+      <div class="specimen-token">--text-body</div>
+      <div class="specimen-size">0.8125rem · 13px · 400</div>
+    </div>
+    <div class="specimen-text t-body">Each attack has a 12% chance to deal double damage. Stacks with other critical chance bonuses. The bonus applies before armour reduction.</div>
+  </div>
+
+  <div class="specimen-row">
+    <div class="specimen-meta">
+      <div class="specimen-token">--text-label</div>
+      <div class="specimen-size">0.6875rem · 11px · 600</div>
+    </div>
+    <div class="specimen-text t-label">Build Archetype · Damage Dealt · Floor Reached</div>
+  </div>
+
+  <div class="specimen-row">
+    <div class="specimen-meta">
+      <div class="specimen-token">--text-caption</div>
+      <div class="specimen-size">0.5625rem · 9px · 400</div>
+    </div>
+    <div class="specimen-text t-caption">Version 0.1.0 · Session started 14:32 · [B] Build  [Tab] Stats  [R] Hub</div>
+  </div>
+
+  <div class="specimen-row">
+    <div class="specimen-meta">
+      <div class="specimen-token">--text-stat</div>
+      <div class="specimen-size">1.125rem · 18px · 700</div>
+    </div>
+    <div class="specimen-text t-stat" style="color: var(--accent-gold); font-variant-numeric: tabular-nums;">1,247 / 1,500 HP &nbsp;·&nbsp; 382 DPS &nbsp;·&nbsp; ★ 240</div>
+  </div>
+
+  <hr class="divider"/>
+
+  <!-- ════════════════════════════════════════════════════════════════════════
+       TABULAR NUMERALS
+       ════════════════════════════════════════════════════════════════════════ -->
+  <p class="section-label">Tabular Numerals — Use on All Stat Panels</p>
+
+  <div class="tabular-row">
+    <div class="tabular-col">
+      <div class="tabular-label">Without tabular-nums</div>
+      <div style="font-size: var(--text-stat); font-weight: var(--weight-stat);">1,111</div>
+      <div style="font-size: var(--text-stat); font-weight: var(--weight-stat);">7,777</div>
+      <div style="font-size: var(--text-stat); font-weight: var(--weight-stat);">100 / 100</div>
+    </div>
+    <div class="tabular-col">
+      <div class="tabular-label">With tabular-nums (use this)</div>
+      <div style="font-size: var(--text-stat); font-weight: var(--weight-stat); font-variant-numeric: tabular-nums;">1,111</div>
+      <div style="font-size: var(--text-stat); font-weight: var(--weight-stat); font-variant-numeric: tabular-nums;">7,777</div>
+      <div style="font-size: var(--text-stat); font-weight: var(--weight-stat); font-variant-numeric: tabular-nums;">100 / 100</div>
+    </div>
+    <div style="font-size: var(--text-caption); color: var(--text-muted); max-width: 300px; line-height: 1.5;">
+      Tabular numerals give each digit equal width so numbers don't visually "jump" when values change during combat. Apply to: HP values, gold counters, DPS displays, all stat columns.
+      <br/><br/>
+      CSS: <code style="color: var(--accent-primary);">font-variant-numeric: tabular-nums</code>
+      or class: <code style="color: var(--accent-primary);">.u-tabular</code>
+    </div>
+  </div>
+
+  <hr class="divider"/>
+
+  <!-- ════════════════════════════════════════════════════════════════════════
+       COLOUR ROLES
+       ════════════════════════════════════════════════════════════════════════ -->
+  <p class="section-label">Text Colour Roles</p>
+  <div class="colour-grid">
+    <div class="colour-chip"><div class="colour-swatch" style="background: var(--text-primary)"></div><div class="colour-info"><div class="colour-name" style="color:var(--text-primary)">Primary</div><div class="colour-var">--text-primary</div></div></div>
+    <div class="colour-chip"><div class="colour-swatch" style="background: var(--text-secondary)"></div><div class="colour-info"><div class="colour-name" style="color:var(--text-secondary)">Secondary</div><div class="colour-var">--text-secondary</div></div></div>
+    <div class="colour-chip"><div class="colour-swatch" style="background: var(--text-muted)"></div><div class="colour-info"><div class="colour-name" style="color:var(--text-muted)">Muted</div><div class="colour-var">--text-muted</div></div></div>
+    <div class="colour-chip"><div class="colour-swatch" style="background: var(--text-dim)"></div><div class="colour-info"><div class="colour-name" style="color:var(--text-dim)">Dim</div><div class="colour-var">--text-dim</div></div></div>
+    <div class="colour-chip"><div class="colour-swatch" style="background: var(--text-accent)"></div><div class="colour-info"><div class="colour-name" style="color:var(--text-accent)">Accent (gold)</div><div class="colour-var">--text-accent</div></div></div>
+    <div class="colour-chip"><div class="colour-swatch" style="background: var(--text-danger)"></div><div class="colour-info"><div class="colour-name" style="color:var(--text-danger)">Danger</div><div class="colour-var">--text-danger</div></div></div>
+    <div class="colour-chip"><div class="colour-swatch" style="background: var(--text-heal)"></div><div class="colour-info"><div class="colour-name" style="color:var(--text-heal)">Heal</div><div class="colour-var">--text-heal</div></div></div>
+  </div>
+
+  <p class="section-label">Surface Layer System</p>
+  <div class="colour-grid">
+    <div class="colour-chip"><div class="colour-swatch" style="background: var(--bg-void); border: 1px solid var(--border-subtle)"></div><div class="colour-info"><div class="colour-name">Void (0)</div><div class="colour-var">--bg-void · Page fill</div></div></div>
+    <div class="colour-chip"><div class="colour-swatch" style="background: var(--bg-base); border: 1px solid var(--border-subtle)"></div><div class="colour-info"><div class="colour-name">Base (1)</div><div class="colour-var">--bg-base · App shell</div></div></div>
+    <div class="colour-chip"><div class="colour-swatch" style="background: var(--bg-surface); border: 1px solid var(--border-subtle)"></div><div class="colour-info"><div class="colour-name">Surface (2)</div><div class="colour-var">--bg-surface · Sections</div></div></div>
+    <div class="colour-chip"><div class="colour-swatch" style="background: var(--bg-raised); border: 1px solid var(--border-subtle)"></div><div class="colour-info"><div class="colour-name">Raised (3)</div><div class="colour-var">--bg-raised · Cards</div></div></div>
+    <div class="colour-chip"><div class="colour-swatch" style="background: var(--bg-float); border: 1px solid var(--border-subtle)"></div><div class="colour-info"><div class="colour-name">Float (4)</div><div class="colour-var">--bg-float · Tooltips</div></div></div>
+    <div class="colour-chip"><div class="colour-swatch" style="background: var(--bg-overlay); border: 1px solid var(--border-subtle)"></div><div class="colour-info"><div class="colour-name">Overlay (5)</div><div class="colour-var">--bg-overlay · Modal dim</div></div></div>
+  </div>
+
+  <hr class="divider"/>
+
+  <!-- ════════════════════════════════════════════════════════════════════════
+       RARITY SYSTEM
+       ════════════════════════════════════════════════════════════════════════ -->
+  <p class="section-label">Rarity Tiers</p>
+  <div class="rarity-row">
+    <span class="rarity-badge rarity-common">▪ Common</span>
+    <span class="rarity-badge rarity-rare">◆ Rare</span>
+    <span class="rarity-badge rarity-epic">✦ Epic</span>
+    <span class="rarity-badge rarity-legendary">♛ Legendary</span>
+  </div>
+
+  <hr class="divider"/>
+
+  <!-- ════════════════════════════════════════════════════════════════════════
+       SPACING SCALE
+       ════════════════════════════════════════════════════════════════════════ -->
+  <p class="section-label">Spacing Scale (4px base)</p>
+  <div class="spacing-grid">
+    <div class="spacing-row"><span class="spacing-token">--space-1</span><div class="spacing-bar" style="width: var(--space-1)"></div><span class="spacing-value">4px</span></div>
+    <div class="spacing-row"><span class="spacing-token">--space-2</span><div class="spacing-bar" style="width: var(--space-2)"></div><span class="spacing-value">8px</span></div>
+    <div class="spacing-row"><span class="spacing-token">--space-3</span><div class="spacing-bar" style="width: var(--space-3)"></div><span class="spacing-value">12px</span></div>
+    <div class="spacing-row"><span class="spacing-token">--space-4</span><div class="spacing-bar" style="width: var(--space-4)"></div><span class="spacing-value">16px</span></div>
+    <div class="spacing-row"><span class="spacing-token">--space-5</span><div class="spacing-bar" style="width: var(--space-5)"></div><span class="spacing-value">24px</span></div>
+    <div class="spacing-row"><span class="spacing-token">--space-6</span><div class="spacing-bar" style="width: var(--space-6)"></div><span class="spacing-value">32px</span></div>
+    <div class="spacing-row"><span class="spacing-token">--space-7</span><div class="spacing-bar" style="width: var(--space-7)"></div><span class="spacing-value">48px</span></div>
+    <div class="spacing-row"><span class="spacing-token">--space-8</span><div class="spacing-bar" style="width: var(--space-8)"></div><span class="spacing-value">64px</span></div>
+  </div>
+
+</body>
+</html>

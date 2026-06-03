@@ -1,0 +1,80 @@
+/**
+ * reset.css — Minimal browser normalisation.
+ * Loaded before all other stylesheets.
+ */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin:     0;
+  padding:    0;
+}
+
+html, body {
+  height:           100%;
+  width:            100%;
+  overflow:         hidden;
+  background-color: var(--bg-void);
+}
+
+body {
+  font-family:         var(--font-mono);
+  font-size:           var(--text-body);
+  line-height:         var(--lh-body);
+  color:               var(--text-primary);
+  -webkit-font-smoothing:  antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Remove list styling wherever lists are used as UI primitives */
+ul, ol {
+  list-style: none;
+}
+
+/* Images and media should never overflow their containers */
+img, video, canvas, svg {
+  display:   block;
+  max-width: 100%;
+}
+
+/* Buttons reset — component CSS handles all button styling */
+button {
+  background:  none;
+  border:      none;
+  cursor:      pointer;
+  font-family: inherit;
+  font-size:   inherit;
+  color:       inherit;
+  padding:     0;
+}
+
+/* Links reset */
+a {
+  color:           inherit;
+  text-decoration: none;
+}
+
+/* Form elements inherit font */
+input, select, textarea {
+  font-family: inherit;
+  font-size:   inherit;
+}
+
+/* Focus outline — overridden per component but never removed entirely */
+:focus-visible {
+  outline:        2px solid var(--border-active);
+  outline-offset: 2px;
+}
+
+/* Scrollbars — thin and themed (overridden per scroll-area component) */
+::-webkit-scrollbar {
+  width:  6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track  { background: transparent; }
+::-webkit-scrollbar-thumb  {
+  background:    var(--border-default);
+  border-radius: var(--radius-full);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-hover);
+}
