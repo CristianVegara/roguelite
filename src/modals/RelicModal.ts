@@ -1,0 +1,147 @@
+/**
+ * RelicModal.ts — HTML replacement for RelicScene.
+ *
+ * Same bus pattern as UpgradeModal.
+ * Opens on 'relic:available'. Emits 'relic:selected' or 'relic:skipped'.
+ * GameScene applies the relic (has engine + playerStats references).
+ *
+ * Mounts in #modal-root.
+ */
+
+import { bus }          from '../bridge/GameEventBus';
+import { RelicDefinition, RELIC_RARITY_COLOR, RELIC_RARITY_LABEL } from '../data/RelicDefinition';
+
+export class RelicModal {
+  private root:   HTMLElement;
+  private active = false;
+
+  constructor() {
+    this.root = document.getElementById('modal-root')!;
+
+    bus.on('relic:available', (e) => {
+      if (this.active) return;
+      this.open(e.payload.relics, e.payload.floor);
+    });
+  }
+
+  private open(relics: RelicDefinition[], floor: number): void {
+    this.active = true;
+
+    const dim = document.createElement('div');
+    dim.className = 'modal-dim';
+
+    const panel = document.createElement('div');
+    panel.className = 'relic-modal';
+
+    panel.append(
+      this.buildHeader(floor),
+      this.buildCardRow(relics),
+      this.buildSkipBtn(),
+    );
+
+    dim.appendChild(panel);
+    this.root.appendChild(dim);
+    requestAnimationFrame(() => dim.classList.add('is-visible'));
+  }
+
+  private close(): void {
+    this.active = false;
+    const dim = this.root.querySelector('.modal-dim');
+    if (dim) {
+      dim.classList.remove('is-visible');
+      dim.addEventListener('transitionend', () => dim.remove(), { once: true });
+    }
+  }
+
+  private buildHeader(floor: number): HTMLElement {
+    const hdr = document.createElement('div');
+    hdr.className = 'rm-header';
+
+    const title = document.createElement('div');
+    title.className   = 'rm-title';
+    title.textContent = '✦  RELIC FOUND  ✦';
+
+    const sub = document.createElement('div');
+    sub.className   = 'rm-subtitle';
+    sub.textContent = `Floor ${floor} — choose a relic`;
+
+    hdr.append(title, sub);
+    return hdr;
+  }
+
+  private buildCardRow(relics: RelicDefinition[]): HTMLElement {
+    const row = document.createElement('div');
+    row.className = 'rm-card-row';
+    relics.forEach(r => row.appendChild(this.buildCard(r)));
+    return row;
+  }
+
+  private buildCard(relic: RelicDefinition): HTMLElement {
+    const card = document.createElement('div');
+    card.className = 'rm-card';
+    card.style.setProperty('--relic-color',  intToHex(relic.color));
+    card.style.setProperty('--rarity-color', intToHex(RELIC_RARITY_COLOR[relic.rarity]));
+
+    const badges = document.createElement('div');
+    badges.className = 'rm-card-badges';
+
+    const typeEl = document.createElement('span');
+    typeEl.className   = 'rm-card-type';
+    typeEl.textContent = 'RELIC';
+
+    const rarEl = document.createElement('span');
+    rarEl.className   = 'rm-card-rarity';
+    rarEl.textContent = RELIC_RARITY_LABEL[relic.rarity];
+
+    badges.append(typeEl, rarEl);
+
+    const gemEl = document.createElement('div');
+    gemEl.className   = 'rm-card-gem';
+    gemEl.textContent = '◈';
+
+    const nameEl = document.createElement('div');
+    nameEl.className   = 'rm-card-name';
+    nameEl.textContent = relic.name;
+
+    const div = document.createElement('div');
+    div.className = 'rm-card-divider';
+
+    const descEl = document.createElement('div');
+    descEl.className   = 'rm-card-desc';
+    descEl.textContent = relic.description;
+
+    const flavEl = document.createElement('div');
+    flavEl.className   = 'rm-card-flavour';
+    flavEl.textContent = relic.flavour ? `"${relic.flavour}"` : '';
+    flavEl.hidden      = !relic.flavour;
+
+    card.append(badges, gemEl, nameEl, div, descEl, flavEl);
+
+    card.addEventListener('click', () => {
+      if (!this.active) return;
+      card.classList.add('is-selected');
+      setTimeout(() => {
+        bus.emit({ type: 'relic:selected', payload: { relicId: relic.id } });
+        this.close();
+      }, 100);
+    });
+
+    return card;
+  }
+
+  private buildSkipBtn(): HTMLElement {
+    const skip = document.createElement('button');
+    skip.className   = 'um-skip-btn';   // reuse upgrade modal skip style
+    skip.textContent = 'SKIP';
+    skip.addEventListener('click', () => {
+      if (!this.active) return;
+      bus.emit({ type: 'relic:skipped', payload: {} });
+      this.close();
+    });
+    return skip;
+  }
+}
+
+function intToHex(color: number): string {
+  return `#${color.toString(16).padStart(6, '0')}`;
+}

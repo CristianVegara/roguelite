@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { ServiceLocator } from '../services/ServiceLocator';
+import { router }         from '../router/Router';
 
 /**
  * BootScene
@@ -30,9 +31,14 @@ export class BootScene extends Phaser.Scene {
     // 2. Generate placeholder textures
     this.generatePlaceholderTextures();
 
-    // 3. Route: first-time player → NameEntryScene; returning player → HomeScene
+    // 3. Route: first-time player → name-entry; returning player → home (HTML)
     const profile = ServiceLocator.profile.getProfile();
-    this.scene.start(profile ? 'HomeScene' : 'NameEntryScene');
+    if (profile) {
+      router.navigate('home');
+    } else {
+      // NameEntryScene still handled by Phaser until M11
+      this.scene.start('NameEntryScene');
+    }
   }
 
   private generatePlaceholderTextures(): void {

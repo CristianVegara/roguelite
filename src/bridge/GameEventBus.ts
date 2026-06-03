@@ -55,6 +55,7 @@ export interface BusEvents {
   'merchant:purchase': {
     itemId: string;
     type:   'upgrade' | 'consumable' | 'reroll';
+    cost:   number;
   };
   'merchant:closed': Record<string, never>;
 

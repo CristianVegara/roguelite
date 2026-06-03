@@ -8,8 +8,6 @@ import { pickRunUpgrades, ALL_UPGRADES } from '../data/AllUpgrades';
 import { pickRelics, ALL_RELICS } from '../data/AllRelics';
 import { ServiceLocator } from '../services/ServiceLocator';
 import { RunResultDTO }   from '../services/types';
-import { UpgradeSceneData } from './UpgradeScene';
-import { RelicSceneData } from './RelicScene';
 import { OwnedUpgrades, FloaterType } from '../data/UpgradeDefinition';
 import { metaService, MetaService } from '../meta/MetaService';
 import { StatsPanel }  from '../ui/StatsPanel';
@@ -20,6 +18,7 @@ import { XPManager }    from '../combat/XPManager';
 // ── Bridge ────────────────────────────────────────────────────────────────────
 import { bus }      from '../bridge/GameEventBus';
 import { runState } from '../bridge/RunStateStore';
+import { router }   from '../router/Router';
 
 type CombatState = 'fighting' | 'floor_clear' | 'player_dead' | 'special_floor';
 
@@ -414,7 +413,6 @@ export class GameScene extends Phaser.Scene {
 
   private launchUpgradeScreen(): void {
     const classWeights = this.currentClass?.categoryWeights;
-    // Determine context label: boss reward > level-up > floor (Boss Rush fallback)
     const isBossReward = this.enemy?.isBoss ?? false;
     const level        = this.xpManager.currentLevel;
     const contextLabel = isBossReward
@@ -424,36 +422,47 @@ export class GameScene extends Phaser.Scene {
         : `Floor ${this.floorManager.currentFloor} cleared`;
 
     const upgradePicks = pickRunUpgrades(3, this.floorManager.currentFloor, this.owned, classWeights);
-    const data: UpgradeSceneData = {
-      playerStats:   this.player.stats,
-      engine:        this.engine,
-      upgrades:      upgradePicks,
-      ownedUpgrades: this.owned,
-      floor:         this.floorManager.currentFloor,
-      context:       contextLabel,
-    };
-    // Bridge: emit upgrade available (HTML modal will listen here in M8)
+
     bus.emit({ type: 'upgrade:available', payload: {
       upgrades:     upgradePicks,
       contextLabel,
       floor:        this.floorManager.currentFloor,
     }});
-    this.events.once(Phaser.Scenes.Events.RESUME, (_scene: unknown, resumeData: { upgraded?: boolean }) => {
-      // Momentum Stone relic: +5 max HP per upgrade taken
-      if (resumeData?.upgraded && this.engine.hasUpgrade('relic_momentum_stone')) {
+
+    // Cross-cleanup: whichever fires first removes the other
+    let offSelected: (() => void) | undefined;
+    let offSkipped:  (() => void) | undefined;
+
+    const afterChoice = (upgraded: boolean) => {
+      offSelected?.();
+      offSkipped?.();
+      if (upgraded && this.engine.hasUpgrade('relic_momentum_stone')) {
         this.player.stats.maxHp += 5;
         this.player.stats.hp    = Math.min(this.player.stats.hp + 5, this.player.stats.maxHp);
       }
-      // Boss Rush: relic floor fires on the same cadence as the upgrade draft
-      // (every 3 bosses). Chain the relic screen before advancing.
+      this.scene.resume();
       const { rules } = getRunConfig();
       if (rules.bossesOnly) {
         this.launchRelicScreen();
       } else {
         this.advanceFloor();
       }
+    };
+
+    offSelected = bus.on('upgrade:selected', (e) => {
+      const upg = upgradePicks.find(u => u.id === e.payload.upgradeId);
+      if (upg) {
+        upg.apply(this.player.stats, this.engine);
+        this.owned.set(upg.id, (this.owned.get(upg.id) ?? 0) + 1);
+        this.engine.registerUpgrade(upg.id);
+      }
+      afterChoice(true);
     });
-    this.scene.launch('UpgradeScene', data);
+
+    offSkipped = bus.on('upgrade:skipped', () => {
+      afterChoice(false);
+    });
+
     this.scene.pause();
   }
 
@@ -463,23 +472,35 @@ export class GameScene extends Phaser.Scene {
       this.advanceFloor();
       return;
     }
-    const data: RelicSceneData = {
-      playerStats:  this.player.stats,
-      engine:       this.engine,
-      relics,
-      ownedRelics:  this.ownedRelics,
-      floor:        this.floorManager.currentFloor,
-    };
-    // Bridge: emit relic available (HTML modal will listen here in M9)
+
     bus.emit({ type: 'relic:available', payload: {
       relics,
       floor: this.floorManager.currentFloor,
     }});
-    this.events.once(Phaser.Scenes.Events.RESUME, () => {
+
+    let offSelected: (() => void) | undefined;
+    let offSkipped:  (() => void) | undefined;
+
+    const afterRelic = (relicId: string | null) => {
+      offSelected?.();
+      offSkipped?.();
+      if (relicId) {
+        const relic = relics.find(r => r.id === relicId);
+        if (relic) {
+          relic.onAcquire(this.player.stats, this.engine);
+          this.engine.registerRelic(relic.id);
+          this.engine.registerUpgrade(relic.id);
+          this.ownedRelics.add(relic.id);
+        }
+      }
       this.updateRelicHud();
+      this.scene.resume();
       this.advanceFloor();
-    });
-    this.scene.launch('RelicScene', data);
+    };
+
+    offSelected = bus.on('relic:selected', (e) => afterRelic(e.payload.relicId));
+    offSkipped  = bus.on('relic:skipped',  ()  => afterRelic(null));
+
     this.scene.pause();
   }
 
@@ -615,26 +636,65 @@ export class GameScene extends Phaser.Scene {
   // ── Merchant floor ───────────────────────────────────────────────────────
 
   private launchMerchantScene(): void {
-    const floor = this.floorManager.currentFloor;
+    const floor          = this.floorManager.currentFloor;
     const merchantOffers = pickRunUpgrades(3, floor, this.owned);
-    const data = {
-      playerStats:   this.player.stats,
-      engine:        this.engine,
-      ownedUpgrades: this.owned,
-      floor,
-    };
-    // Bridge: emit merchant available (HTML modal will listen here in M9)
+
     bus.emit({ type: 'merchant:available', payload: {
       upgradeCards: merchantOffers,
-      consumables:  [],   // populated in M9 when MerchantModal is built
-      rerollCost:   15,
+      consumables: [
+        { id: 'war_ration',       name: 'War Ration',       cost: 20, effect: 'Restore 25% max HP' },
+        { id: 'sharpening_stone', name: 'Sharpening Stone', cost: 25, effect: '+10% damage this floor' },
+        { id: 'guard_totem',      name: 'Guard Totem',       cost: 25, effect: '+20 armor this floor' },
+      ],
+      rerollCost: 15,
       floor,
     }});
-    this.events.once(Phaser.Scenes.Events.RESUME, () => {
-      this.advanceFloor(); // advance past merchant floor into next combat floor
+
+    // Handle purchases while scene is paused
+    const offPurchase = bus.on('merchant:purchase', (e) => {
+      const { itemId, type, cost } = e.payload;
+      this.engine.addGold(-cost);
+      runState.update({ gold: this.engine.gold });
+
+      if (type === 'upgrade') {
+        const upg = merchantOffers.find(u => u.id === itemId)
+          ?? ALL_UPGRADES.find(u => u.id === itemId);
+        if (upg) {
+          upg.apply(this.player.stats, this.engine);
+          this.owned.set(upg.id, (this.owned.get(upg.id) ?? 0) + 1);
+          this.engine.registerUpgrade(upg.id);
+        }
+      } else if (type === 'consumable') {
+        this.applyMerchantConsumable(itemId);
+      }
+      // 'reroll' only deducts gold (handled above); new offers generated by modal
     });
-    this.scene.launch('MerchantScene', data);
+
+    const offClosed = bus.on('merchant:closed', () => {
+      offPurchase();
+      offClosed();
+      this.scene.resume();
+      this.advanceFloor();
+    });
+
     this.scene.pause();
+  }
+
+  /** Apply a consumable purchased from the merchant. */
+  private applyMerchantConsumable(id: string): void {
+    const s = this.player.stats;
+    switch (id) {
+      case 'war_ration':
+        s.hp = Math.min(s.maxHp, s.hp + Math.floor(s.maxHp * 0.25));
+        break;
+      case 'sharpening_stone':
+        s.damage = Math.ceil(s.damage * 1.10);
+        break;
+      case 'guard_totem':
+        s.armor += 20;
+        break;
+    }
+    this.syncRunState();
   }
 
   private onPlayerDead(): void {
@@ -684,7 +744,7 @@ export class GameScene extends Phaser.Scene {
     runState.update({ isRunActive: false });
 
     this.showGameOverOverlay(floor, goldEarned, newTitles);
-    this.input.keyboard?.once('keydown-R', () => this.scene.start('HomeScene'));
+    this.input.keyboard?.once('keydown-R', () => router.navigate('home'));
   }
 
   private generateRunId(): string {
