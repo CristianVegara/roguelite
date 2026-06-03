@@ -69,7 +69,9 @@ export interface BusEvents {
     bossName: string;
   };
   'run:ended': {
-    result: RunResultDTO;
+    result:      RunResultDTO;
+    newTitles:   string[];
+    goldEarned:  number;
   };
 
   // ── HUD controls (HTML → Phaser) ─────────────────────────────────────────

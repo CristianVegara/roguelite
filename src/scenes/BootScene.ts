@@ -36,8 +36,7 @@ export class BootScene extends Phaser.Scene {
     if (profile) {
       router.navigate('home');
     } else {
-      // NameEntryScene still handled by Phaser until M11
-      this.scene.start('NameEntryScene');
+      router.navigate('name-entry');
     }
   }
 

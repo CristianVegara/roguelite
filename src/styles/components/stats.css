@@ -1,0 +1,188 @@
+/**
+ * stats.css — StatsScreen styles (M11).
+ * Uses design tokens. M13 applies the visual-identity polish pass.
+ */
+
+.stats-screen {
+  position:         absolute;
+  inset:            0;
+  display:          flex;
+  flex-direction:   column;
+  background-color: var(--bg-base);
+  font-family:      var(--font-mono);
+  color:            var(--text-primary);
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────── */
+
+.st-header {
+  display:          flex;
+  align-items:      center;
+  gap:              var(--space-3);
+  padding:          var(--space-3) var(--space-4);
+  flex-shrink:      0;
+  background-color: var(--bg-surface);
+  border-bottom:    1px solid var(--border-subtle);
+}
+
+.st-back-btn {
+  background:     none;
+  border:         none;
+  color:          var(--text-dim);
+  font-family:    var(--font-mono);
+  font-size:      var(--text-label);
+  font-weight:    var(--weight-label);
+  cursor:         pointer;
+  padding:        var(--space-1) var(--space-2);
+  border-radius:  var(--radius-md);
+  transition:     color var(--transition-fast), background-color var(--transition-fast);
+  white-space:    nowrap;
+}
+.st-back-btn:hover { color: var(--text-primary); background-color: var(--bg-raised); }
+
+.st-header-title {
+  flex:           1;
+  text-align:     center;
+  font-size:      var(--text-heading);
+  font-weight:    var(--weight-heading);
+  letter-spacing: var(--ls-heading);
+}
+
+/* ── Scrollable content ─────────────────────────────────────────────────── */
+
+.st-content {
+  flex:       1;
+  overflow-y: auto;
+  padding:    var(--space-3);
+  display:    flex;
+  flex-direction: column;
+  gap:        var(--space-3);
+}
+
+/* ── Section wrapper ────────────────────────────────────────────────────── */
+
+.st-section { display: flex; flex-direction: column; gap: var(--space-2); }
+
+.st-section-label {
+  font-size:      var(--text-caption);
+  color:          var(--text-dim);
+  letter-spacing: var(--ls-label);
+}
+
+/* ── Player card ────────────────────────────────────────────────────────── */
+
+.st-player-card {
+  display:          flex;
+  align-items:      center;
+  gap:              var(--space-3);
+  padding:          var(--space-4);
+  background-color: var(--bg-raised);
+  border:           1px solid var(--border-default);
+  border-radius:    var(--radius-lg);
+}
+
+.st-avatar {
+  width:            48px;
+  height:           48px;
+  border-radius:    var(--radius-full);
+  background-color: var(--bg-float);
+  border:           1px solid var(--border-subtle);
+  display:          flex;
+  align-items:      center;
+  justify-content:  center;
+  font-size:        1.4rem;
+  flex-shrink:      0;
+}
+
+.st-player-name { font-size: var(--text-body); font-weight: var(--weight-label); }
+.st-player-sub  { font-size: var(--text-caption); color: var(--text-muted); margin-top: 2px; }
+.st-player-meta { font-size: var(--text-caption); color: var(--text-dim); margin-top: 2px; }
+
+/* ── Career stat grid (4 cols × 2 rows) ─────────────────────────────────── */
+
+.st-stat-grid {
+  display:               grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap:                   var(--space-1);
+}
+
+.st-stat-cell {
+  padding:          var(--space-2);
+  background-color: var(--bg-raised);
+  border:           1px solid var(--border-subtle);
+  border-radius:    var(--radius-md);
+  text-align:       center;
+}
+.st-stat-lbl { font-size: var(--text-caption); color: var(--text-dim); letter-spacing: var(--ls-caption); }
+.st-stat-val { font-size: var(--text-body); font-weight: var(--weight-label);
+               font-variant-numeric: tabular-nums; margin-top: 2px; }
+
+/* ── Row list (class stats) ─────────────────────────────────────────────── */
+
+.st-row-list { display: flex; flex-direction: column; gap: 2px; }
+
+.st-row {
+  display:          flex;
+  justify-content:  space-between;
+  align-items:      center;
+  padding:          var(--space-2) var(--space-3);
+  background-color: var(--bg-raised);
+  border:           1px solid var(--border-subtle);
+  border-radius:    var(--radius-md);
+  font-size:        var(--text-caption);
+}
+.st-row-lbl { color: var(--text-muted); }
+.st-row-val { color: var(--text-primary); font-weight: var(--weight-label); }
+
+/* ── Milestones grid ────────────────────────────────────────────────────── */
+
+.st-milestone-grid {
+  display:               grid;
+  grid-template-columns: 1fr 1fr;
+  gap:                   var(--space-1);
+}
+
+.st-milestone-chip {
+  display:          flex;
+  align-items:      center;
+  gap:              var(--space-2);
+  padding:          var(--space-2) var(--space-3);
+  background-color: var(--bg-raised);
+  border:           1px solid var(--border-subtle);
+  border-radius:    var(--radius-md);
+  font-size:        var(--text-caption);
+  color:            var(--text-dim);
+}
+.st-milestone-chip.is-earned {
+  background-color: rgba(57,153,106,0.06);
+  border-color:     rgba(57,153,106,0.25);
+  color:            var(--text-primary);
+}
+
+.st-milestone-check { font-size: var(--text-label); color: var(--text-dim); }
+.st-milestone-chip.is-earned .st-milestone-check { color: var(--accent-nature); }
+
+/* ── Recent runs list ───────────────────────────────────────────────────── */
+
+.st-run-list { display: flex; flex-direction: column; gap: 2px; }
+
+.st-run-row {
+  display:               grid;
+  grid-template-columns: 44px 80px 44px 1fr 44px;
+  align-items:           center;
+  gap:                   var(--space-2);
+  padding:               var(--space-2) var(--space-3);
+  background-color:      var(--bg-raised);
+  border:                1px solid var(--border-subtle);
+  border-radius:         var(--radius-md);
+  font-size:             var(--text-caption);
+}
+.st-run-date  { color: var(--text-dim); }
+.st-run-class { color: var(--text-muted); }
+.st-run-floor { font-weight: var(--weight-label); font-variant-numeric: tabular-nums; }
+.st-run-build { color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.st-run-dur   { color: var(--text-dim); text-align: right; }
+
+/* ── Empty state ────────────────────────────────────────────────────────── */
+
+.st-empty { font-size: var(--text-label); color: var(--text-dim); padding: var(--space-4) 0; }

@@ -92,6 +92,7 @@ export class UpgradeModal {
     const rarityColor = intToHex(RARITY_COLOR[upg.rarity]);
     card.style.setProperty('--upg-color',   accentColor);
     card.style.setProperty('--rarity-color', rarityColor);
+    card.dataset['rarity'] = upg.rarity;
 
     // Tier tag (top-left) + rarity badge (top-right)
     const badges = document.createElement('div');

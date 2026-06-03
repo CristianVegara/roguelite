@@ -18,7 +18,6 @@ import { XPManager }    from '../combat/XPManager';
 // ── Bridge ────────────────────────────────────────────────────────────────────
 import { bus }      from '../bridge/GameEventBus';
 import { runState } from '../bridge/RunStateStore';
-import { router }   from '../router/Router';
 
 type CombatState = 'fighting' | 'floor_clear' | 'player_dead' | 'special_floor';
 
@@ -738,13 +737,10 @@ export class GameScene extends Phaser.Scene {
     const { newTitles } = ServiceLocator.profile.recordRunEnd(run);
     ServiceLocator.history.addRun(run);
 
-    // Bridge: run ended — HTML GameOverModal listens here in M10
-    bus.emit({ type: 'run:ended', payload: { result: run } });
+    // Bridge: run ended — HTML GameOverModal listens here
+    bus.emit({ type: 'run:ended', payload: { result: run, newTitles, goldEarned } });
     // Bridge: mark run as inactive and sync final state
     runState.update({ isRunActive: false });
-
-    this.showGameOverOverlay(floor, goldEarned, newTitles);
-    this.input.keyboard?.once('keydown-R', () => router.navigate('home'));
   }
 
   private generateRunId(): string {
@@ -904,127 +900,6 @@ export class GameScene extends Phaser.Scene {
     this.overlay.add([bg, rule, cleared, sub]);
     this.overlay.setVisible(true).setAlpha(0);
     this.tweens.add({ targets: this.overlay, alpha: 1, duration: 300, ease: 'Power2' });
-  }
-
-  private showGameOverOverlay(floor: number, earned: number, newTitles: string[] = []): void {
-    this.overlay.removeAll(true);
-
-    const PW = 320; const PH = 340;
-    const hx = -PW / 2; const hy = -PH / 2;
-
-    const bg = this.add.graphics();
-    bg.fillStyle(0x000000, 0.88);
-    bg.fillRoundedRect(hx, hy, PW, PH, 10);
-    bg.lineStyle(1, 0x252540);
-    bg.strokeRoundedRect(hx, hy, PW, PH, 10);
-
-    const title = this.add.text(0, hy + 22, 'GAME OVER', {
-      fontSize: '26px', color: '#e74c3c', fontFamily: 'monospace', fontStyle: 'bold',
-    }).setOrigin(0.5);
-
-    // Build identity line
-    const buildName = this.detectBuildName();
-    const classLine = this.currentClass
-      ? `${this.currentClass.icon}  ${this.currentClass.name.toUpperCase()}  ·  ${buildName}`
-      : buildName;
-    const classText = this.add.text(0, hy + 56, classLine, {
-      fontSize: '10px', color: '#9b59b6', fontFamily: 'monospace',
-    }).setOrigin(0.5);
-
-    // Divider
-    const div1 = this.add.graphics();
-    div1.lineStyle(1, 0x1a1a30);
-    div1.lineBetween(hx + 16, hy + 72, hx + PW - 16, hy + 72);
-
-    // Primary stat: "Bosses Cleared" for Boss Rush, "Floor reached" for all others
-    const { modeId: deadModeId } = getRunConfig();
-    const primaryLabel = deadModeId === 'boss_rush' ? 'BOSSES CLEARED' : 'FLOOR';
-    const primaryValue = deadModeId === 'boss_rush' ? `${this.bossKillCount}` : `${floor}`;
-    const floorLabel = this.add.text(-60, hy + 98, primaryLabel, {
-      fontSize: '9px', color: '#555577', fontFamily: 'monospace',
-    }).setOrigin(0, 0.5);
-    const floorNum = this.add.text(-60, hy + 116, primaryValue, {
-      fontSize: '28px', color: '#e0e0e0', fontFamily: 'monospace', fontStyle: 'bold',
-    }).setOrigin(0, 0);
-
-    const bestFloor = metaService.highestFloor;
-    const bestLabel = this.add.text(60, hy + 98, 'BEST', {
-      fontSize: '9px', color: '#333355', fontFamily: 'monospace',
-    }).setOrigin(0, 0.5);
-    const bestNum = this.add.text(60, hy + 116, `${bestFloor}`, {
-      fontSize: '28px', color: '#333355', fontFamily: 'monospace', fontStyle: 'bold',
-    }).setOrigin(0, 0);
-
-    const div2 = this.add.graphics();
-    div2.lineStyle(1, 0x1a1a30);
-    div2.lineBetween(hx + 16, hy + 152, hx + PW - 16, hy + 152);
-
-    // Combat stats row
-    const statY = hy + 166;
-    const statTexts = [
-      [`${this.killCount}`, 'KILLS'],
-      [`${this.bossKillCount}`, 'BOSSES'],
-      [`${this.engine.highestDamageHit}`, 'TOP HIT'],
-      [`${this.engine.totalHealingDone}`, 'HEALED'],
-    ];
-    const colW = PW / 4;
-    const statObjs: Phaser.GameObjects.Text[] = [];
-    statTexts.forEach(([val, lbl], i) => {
-      const cx = hx + colW * i + colW / 2;
-      statObjs.push(
-        this.add.text(cx, statY,      val, { fontSize: '14px', color: '#e0e0e0', fontFamily: 'monospace', fontStyle: 'bold' }).setOrigin(0.5, 0),
-        this.add.text(cx, statY + 18, lbl, { fontSize: '8px',  color: '#555577', fontFamily: 'monospace' }).setOrigin(0.5, 0),
-      );
-    });
-
-    const div3 = this.add.graphics();
-    div3.lineStyle(1, 0x1a1a30);
-    div3.lineBetween(hx + 16, hy + 206, hx + PW - 16, hy + 206);
-
-    // Relics
-    const relicNames = [...this.ownedRelics]
-      .map(id => { const d = ALL_RELICS.find(r => r.id === id); return d ? d.name : id; })
-      .join('  ·  ');
-    const relicText = relicNames
-      ? this.add.text(0, hy + 220, `◈  ${relicNames}`, { fontSize: '8px', color: '#ffd700', fontFamily: 'monospace', wordWrap: { width: PW - 32 }, align: 'center' }).setOrigin(0.5, 0)
-      : this.add.text(0, hy + 220, 'No relics found', { fontSize: '8px', color: '#333355', fontFamily: 'monospace' }).setOrigin(0.5, 0);
-
-    const div4 = this.add.graphics();
-    div4.lineStyle(1, 0x1a1a30);
-    div4.lineBetween(hx + 16, hy + 248, hx + PW - 16, hy + 248);
-
-    // Currency earned
-    const earnedLabel = this.add.text(-20, hy + 264, 'EARNED', { fontSize: '8px', color: '#555577', fontFamily: 'monospace' }).setOrigin(1, 0.5);
-    const earnedVal   = this.add.text(-14, hy + 264, `+${earned} ★`, { fontSize: '13px', color: '#ffd700', fontFamily: 'monospace', fontStyle: 'bold' }).setOrigin(0, 0.5);
-
-    const hint = this.add.text(0, hy + PH - 22, 'Press R to return to hub', {
-      fontSize: '9px', color: '#333355', fontFamily: 'monospace',
-    }).setOrigin(0.5);
-
-    const allObjs: Phaser.GameObjects.GameObject[] = [
-      bg, title, classText, div1,
-      floorLabel, floorNum, bestLabel, bestNum, div2,
-      ...statObjs, div3, relicText, div4,
-      earnedLabel, earnedVal, hint,
-    ];
-
-    // ── Milestone unlock banner ────────────────────────────────────────────
-    if (newTitles.length > 0) {
-      const titleName = newTitles[0]; // show first unlock
-      const unlockBg = this.add.graphics();
-      unlockBg.fillStyle(0x0d2a18);
-      unlockBg.fillRoundedRect(-150, hy + PH - 56, 300, 26, 4);
-      unlockBg.lineStyle(1, 0x2ecc71);
-      unlockBg.strokeRoundedRect(-150, hy + PH - 56, 300, 26, 4);
-      const unlockText = this.add.text(0, hy + PH - 43, `✦ Title unlocked: ${titleName}`, {
-        fontSize: '10px', color: '#2ecc71', fontFamily: 'monospace', fontStyle: 'bold',
-      }).setOrigin(0.5);
-      allObjs.push(unlockBg, unlockText);
-    }
-
-    this.overlay.add(allObjs);
-    this.overlay.setVisible(true).setAlpha(0);
-    this.tweens.add({ targets: this.overlay, alpha: 1, duration: 300 });
   }
 
   /** Detect the player's build archetype from owned upgrades. */

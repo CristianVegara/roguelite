@@ -1,5 +1,5 @@
 /**
- * hud.css — HTML CombatHUD styles.
+ * hud.css — HTML CombatHUD styles. (M13: all tokens applied)
  *
  * The HUD frame is a 480×640 container centred over the Phaser canvas.
  * All pixel values here mirror the layout constants in GameScene.ts:
@@ -8,9 +8,6 @@
  *   HP_PANEL_Y  = 66,  HP_PANEL_H = 58, HP_PANEL_W = 232
  *   HP_L_X      = 4,   HP_R_X = 242
  *   BOT_BAR_Y   = 588
- *
- * During M4 the Phaser HUD and this HTML HUD are visible simultaneously
- * for comparison. In M5 the Phaser HUD is deleted.
  */
 
 /* ── Frame ───────────────────────────────────────────────────────────────── */
@@ -22,10 +19,7 @@
   left:      50%;
   top:       50%;
   transform: translate(-50%, -50%);
-  /* Frame itself passes clicks through; interactive children opt-in */
   pointer-events: none;
-  /* For debugging layout: uncomment to see the frame boundary */
-  /* outline: 1px dashed rgba(255,0,0,0.3); */
 }
 
 /* ── Top bar ─────────────────────────────────────────────────────────────── */
@@ -34,50 +28,51 @@
   position:         absolute;
   top:              0; left: 0; right: 0;
   height:           44px;
-  background-color: #0c0c1e;
-  border-bottom:    1px solid #1e1e36;
+  background-color: var(--bg-surface);
+  border-bottom:    1px solid var(--border-subtle);
 }
 
 .hud-floor-label {
-  position:    absolute;
-  top:         0; left: 0; right: 0;
-  height:      44px;
-  display:     flex;
-  align-items: center;
-  justify-content: center;
-  font-size:   15px;
-  font-weight: var(--weight-title);
-  font-family: var(--font-mono);
-  color:       var(--text-primary);
-  pointer-events: none;
+  position:             absolute;
+  top:                  0; left: 0; right: 0;
+  height:               44px;
+  display:              flex;
+  align-items:          center;
+  justify-content:      center;
+  font-size:            var(--text-label);
+  font-weight:          var(--weight-title);
+  font-family:          var(--font-mono);
+  color:                var(--text-primary);
+  pointer-events:       none;
   font-variant-numeric: tabular-nums;
+  letter-spacing:       var(--ls-label);
 }
 
 .hud-class-badge {
-  position:         absolute;
-  top:              6px; left: 4px;
-  width:            114px; height: 18px;
-  display:          flex;
-  align-items:      center;
-  padding:          0 6px;
-  border-radius:    var(--radius-sm);
-  font-size:        9px;
-  font-family:      var(--font-mono);
-  font-weight:      var(--weight-label);
-  letter-spacing:   0.04em;
-  pointer-events:   none;
-  overflow:         hidden;
-  white-space:      nowrap;
+  position:       absolute;
+  top:            6px; left: 4px;
+  width:          114px; height: 18px;
+  display:        flex;
+  align-items:    center;
+  padding:        0 var(--space-2);
+  border-radius:  var(--radius-sm);
+  font-size:      var(--text-caption);
+  font-family:    var(--font-mono);
+  font-weight:    var(--weight-label);
+  letter-spacing: var(--ls-caption);
+  pointer-events: none;
+  overflow:       hidden;
+  white-space:    nowrap;
 }
 
 /* ── Speed buttons ───────────────────────────────────────────────────────── */
 
 .hud-speed-btns {
-  position:    absolute;
-  top:         12px;
-  right:       6px;
-  display:     flex;
-  gap:         3px;
+  position:       absolute;
+  top:            12px;
+  right:          6px;
+  display:        flex;
+  gap:            3px;
   pointer-events: auto;
 }
 
@@ -87,46 +82,46 @@
   display:         flex;
   align-items:     center;
   justify-content: center;
-  font-size:       9px;
+  font-size:       var(--text-caption);
   font-family:     var(--font-mono);
   font-weight:     var(--weight-label);
   border-radius:   var(--radius-sm);
   cursor:          pointer;
-  border:          1px solid #222240;
-  background:      #0e0e1a;
-  color:           #555577;
-  transition:      background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+  border:          1px solid var(--border-subtle);
+  background:      var(--bg-void);
+  color:           var(--text-dim);
+  transition:      background var(--transition-fast),
+                   border-color var(--transition-fast),
+                   color var(--transition-fast);
   user-select:     none;
 }
 
 .hud-speed-btn:hover {
-  background:      #1a1a30;
-  border-color:    #4444aa;
-  color:           #aaaacc;
+  background:   var(--bg-raised);
+  border-color: var(--border-hover);
+  color:        var(--text-secondary);
 }
 
 .hud-speed-btn.is-active {
-  background:      #1e3a1e;
-  border-color:    #2ecc71;
-  color:           #2ecc71;
+  background:   rgba(57,153,106,0.15);
+  border-color: var(--border-success);
+  color:        var(--accent-nature);
 }
 
 /* ── Modifier strip ──────────────────────────────────────────────────────── */
 
 .hud-mod-strip {
-  position:    absolute;
-  top:         44px; left: 0; right: 0;
-  height:      22px;
-  display:     flex;
-  align-items: center;
-  padding:     0 10px;
-  overflow:    hidden;
+  position:       absolute;
+  top:            44px; left: 0; right: 0;
+  height:         22px;
+  display:        flex;
+  align-items:    center;
+  padding:        0 var(--space-3);
+  overflow:       hidden;
   pointer-events: none;
 }
 
-.hud-mod-strip.is-hidden {
-  display: none;
-}
+.hud-mod-strip.is-hidden { display: none; }
 
 .hud-mod-accent {
   position: absolute;
@@ -135,21 +130,21 @@
 }
 
 .hud-mod-name {
-  font-size:      9px;
+  font-size:      var(--text-caption);
   font-family:    var(--font-mono);
   font-weight:    var(--weight-label);
-  letter-spacing: 0.04em;
+  letter-spacing: var(--ls-caption);
   white-space:    nowrap;
   min-width:      126px;
-  margin-left:    4px;
+  margin-left:    var(--space-1);
 }
 
 .hud-mod-desc {
-  font-size:   8px;
-  font-family: var(--font-mono);
-  color:       #666688;
-  white-space: nowrap;
-  overflow:    hidden;
+  font-size:     var(--text-caption);
+  font-family:   var(--font-mono);
+  color:         var(--text-muted);
+  white-space:   nowrap;
+  overflow:      hidden;
   text-overflow: ellipsis;
 }
 
@@ -160,8 +155,8 @@
   top:              66px;
   height:           58px;
   width:            232px;
-  background-color: #0c0c1e;
-  border:           1px solid #1a1a30;
+  background-color: var(--bg-surface);
+  border:           1px solid var(--border-subtle);
   border-radius:    var(--radius-md);
   overflow:         hidden;
   pointer-events:   none;
@@ -177,22 +172,22 @@
 }
 
 .hud-hp-name {
-  position:      absolute;
-  top:           11px; left: 8px;
-  font-size:     9px;
-  font-family:   var(--font-mono);
-  font-weight:   var(--weight-label);
-  letter-spacing: 0.04em;
-  line-height:   1;
+  position:       absolute;
+  top:            11px; left: 8px;
+  font-size:      var(--text-caption);
+  font-family:    var(--font-mono);
+  font-weight:    var(--weight-label);
+  letter-spacing: var(--ls-caption);
+  line-height:    1;
 }
 
 .hud-hp-value {
-  position:    absolute;
-  top:         11px; right: 8px;
-  font-size:   9px;
-  font-family: var(--font-mono);
-  color:       #9999bb;
-  line-height: 1;
+  position:             absolute;
+  top:                  11px; right: 8px;
+  font-size:            var(--text-caption);
+  font-family:          var(--font-mono);
+  color:                var(--text-muted);
+  line-height:          1;
   font-variant-numeric: tabular-nums;
 }
 
@@ -202,7 +197,7 @@
   left:             8px; right: 8px;
   top:              28px;
   height:           8px;
-  background-color: #12121e;
+  background-color: var(--bg-void);
   border-radius:    var(--radius-sm);
   overflow:         hidden;
 }
@@ -210,7 +205,7 @@
 .hud-hp-fill {
   height:        100%;
   border-radius: var(--radius-sm);
-  transition:    width 80ms linear, background-color 200ms;
+  transition:    width 80ms linear, background-color var(--transition-normal);
 }
 
 /* Status pips (enemy panel) */
@@ -219,12 +214,12 @@
   bottom:      6px; left: 8px;
   display:     flex;
   gap:         6px;
-  font-size:   8px;
+  font-size:   var(--text-caption);
   font-family: var(--font-mono);
 }
 
-.hud-pip--poison { color: #9b59b6; }
-.hud-pip--burn   { color: #e67e22; }
+.hud-pip--poison { color: var(--color-arcane); }
+.hud-pip--burn   { color: var(--accent-fire); }
 
 /* ── Bottom bar ──────────────────────────────────────────────────────────── */
 
@@ -232,46 +227,46 @@
   position:         absolute;
   top:              588px; left: 0; right: 0;
   height:           52px;
-  background-color: #0b0b1c;
-  border-top:       1px solid #1a1a30;
+  background-color: var(--bg-surface);
+  border-top:       1px solid var(--border-subtle);
   pointer-events:   none;
 }
 
 .hud-gold {
-  position:    absolute;
-  top:         10px; left: 38px;
-  font-size:   10px;
-  font-family: var(--font-mono);
-  font-weight: var(--weight-label);
-  color:       #ffd700;
+  position:             absolute;
+  top:                  10px; left: 38px;
+  font-size:            var(--text-label);
+  font-family:          var(--font-mono);
+  font-weight:          var(--weight-label);
+  color:                var(--accent-gold);
   font-variant-numeric: tabular-nums;
 }
 
 .hud-gold-label {
-  position:  absolute;
-  top:       10px; left: 8px;
-  font-size: 8px;
+  position:    absolute;
+  top:         10px; left: 8px;
+  font-size:   var(--text-caption);
   font-family: var(--font-mono);
-  color:     #555577;
+  color:       var(--text-dim);
 }
 
 .hud-kb-hints {
   position:    absolute;
   top:         10px; right: 6px;
-  font-size:   8px;
+  font-size:   var(--text-caption);
   font-family: var(--font-mono);
-  color:       #444466;
+  color:       var(--text-dim);
 }
 
 .hud-relic-text {
-  position:    absolute;
-  top:         28px; left: 8px;
-  font-size:   8px;
-  font-family: var(--font-mono);
-  color:       #444466;
-  max-width:   300px;
-  overflow:    hidden;
-  white-space: nowrap;
+  position:      absolute;
+  top:           28px; left: 8px;
+  font-size:     var(--text-caption);
+  font-family:   var(--font-mono);
+  color:         var(--text-dim);
+  max-width:     300px;
+  overflow:      hidden;
+  white-space:   nowrap;
   text-overflow: ellipsis;
 }
 
@@ -282,7 +277,7 @@
   top:              25px;
   width:            100px;
   height:           5px;
-  background-color: #12121e;
+  background-color: var(--bg-void);
   border-radius:    var(--radius-sm);
   overflow:         hidden;
 }
@@ -290,15 +285,16 @@
 .hud-xp-fill {
   height:        100%;
   border-radius: var(--radius-sm);
-  background:    rgba(79, 195, 247, 0.7);
-  transition:    width 120ms linear;
+  background:    var(--accent-lightning);
+  opacity:       0.7;
+  transition:    width var(--transition-fast) linear;
 }
 
 .hud-xp-level {
   position:    absolute;
   right:       114px;
   top:         28px;
-  font-size:   8px;
+  font-size:   var(--text-caption);
   font-family: var(--font-mono);
-  color:       #444466;
+  color:       var(--text-dim);
 }

@@ -157,6 +157,24 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* ── Global interactive states ────────────────────────────────────────────── */
+
+/* Active press feedback — applies to all buttons without a custom :active */
+button:not(:disabled):active {
+  opacity:    0.75;
+  transform:  scale(0.97);
+  transition: opacity var(--transition-fast), transform var(--transition-fast);
+}
+
+/* Disabled state — components may override */
+button:disabled,
+select:disabled,
+input:disabled {
+  opacity:        0.4;
+  cursor:         not-allowed;
+  pointer-events: none;
+}
+
 /* ── Utility: visually hidden (screen-reader accessible) ─────────────────── */
 
 .u-sr-only {
