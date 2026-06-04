@@ -774,8 +774,8 @@ export class RulesEngine {
       pendingHeal += Math.floor(this.stats.maxHp * 0.05);
     }
 
-    // Warlock class: every 20 gold → +3% permanent damage boost
-    if (this.hasUpgrade('warlock_class') && this.state.gold >= 20) {
+    // Bounty_Hunter class: every 20 gold → +3% permanent damage boost
+    if (this.hasUpgrade('Bounty_Hunter_class') && this.state.gold >= 20) {
       const stacks = Math.floor(this.state.gold / 20);
       this.stats.damageMultiplier = (this.stats.damageMultiplier ?? 1) + stacks * 0.03;
     }

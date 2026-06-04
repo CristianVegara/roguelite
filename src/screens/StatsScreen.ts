@@ -284,7 +284,7 @@ function favoriteClassIcon(p: PlayerProfileDTO): string {
   const icons: Record<string, string> = {
     necromancer: '💀', assassin: '🗡', paladin: '🛡',
     pyromancer: '🔥', plague_doctor: '🧪', berserker: '⚔',
-    archmage: '⚡', warlock: '📜',
+    archmage: '⚡', Bounty_Hunter: '📜',
   };
   return icons[p.favorite_class ?? ''] ?? '?';
 }

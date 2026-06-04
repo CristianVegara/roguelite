@@ -172,10 +172,10 @@ export const ALL_CLASSES: ClassDefinition[] = [
     },
   },
 
-  // ── 8. Warlock ─────────────────────────────────────────────────────────────
+  // ── 8. Bounty_Hunter ─────────────────────────────────────────────────────────────
   {
-    id:          'warlock',
-    name:        'Warlock',
+    id:          'Bounty_Hunter',
+    name:        'Bounty_Hunter',
     icon:        '📜',
     color:       0xf39c12,
     description: 'Economy upgrades appear 3× more often. Start with 30 gold. Every 20 gold permanently boosts damage by 3%.',
@@ -183,7 +183,7 @@ export const ALL_CLASSES: ClassDefinition[] = [
     categoryWeights: { economy: 3, damage: 2 },
     apply: (_stats, engine) => {
       engine.addGold(30);
-      engine.registerUpgrade('warlock_class');
+      engine.registerUpgrade('Bounty_Hunter_class');
     },
   },
 ];

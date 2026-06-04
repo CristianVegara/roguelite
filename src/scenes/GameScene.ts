@@ -858,7 +858,7 @@ export class GameScene extends Phaser.Scene {
     if (rules.disableLifesteal) {
       this.player.stats.lifesteal = 0;
     }
-    // Starting gold (Warlock class already gives 30 via class apply; this
+    // Starting gold (Bounty_Hunter class already gives 30 via class apply; this
     // is for future modes that grant gold)
     if (rules.startingGold > 0) {
       this.engine.addGold(rules.startingGold);
