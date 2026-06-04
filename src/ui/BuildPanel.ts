@@ -149,26 +149,61 @@ export class BuildPanel {
       );
       y += this.LINE_H;
     } else {
+      const tierColors: Record<string, number> = {
+        starter: 0x555577, synergy: 0x2ecc71,
+        transformation: 0x3498db, keystone: 0xffd700,
+      };
+
       for (const [id, stacks] of ownedEntries) {
         const def = ALL_UPGRADES.find(u => u.id === id);
         if (!def) continue;
 
         const col = `#${def.color.toString(16).padStart(6, '0')}`;
-        const stackStr = stacks > 1 ? ` ×${stacks}` : '';
-        const nameText = this.scene.add.text(8, y, `${def.name}${stackStr}`, {
+
+        // ── Name (truncated to leave room for dot zone) ───────────────────
+        const maxChars  = def.maxStacks > 1 ? 16 : 20;
+        const label     = def.name.length > maxChars
+          ? def.name.slice(0, maxChars - 1) + '…'
+          : def.name;
+        const nameText  = this.scene.add.text(8, y, label, {
           fontSize: '9px', color: col, fontFamily: 'monospace',
         });
         contentContainer.add(nameText);
 
-        // Tier dot
-        const tierColors: Record<string, number> = {
-          starter: 0x555577, synergy: 0x2ecc71,
-          transformation: 0x3498db, keystone: 0xffd700,
-        };
-        const dot = this.scene.add.graphics();
-        dot.fillStyle(tierColors[def.tier] ?? 0x555577);
-        dot.fillCircle(this.PANEL_W - 10, y + 5, 3);
-        contentContainer.add(dot);
+        // ── Stack dots (only for stackable upgrades) ──────────────────────
+        // Layout: filled dots for owned stacks, dim outline dots for remaining
+        // capacity. Max 8 shown. Rightmost dot at x = PANEL_W - 18 (leaves
+        // room for the tier dot at PANEL_W - 10). Dots step 8px left each.
+        if (def.maxStacks > 1) {
+          const maxDots  = Math.min(def.maxStacks, 8);
+          const dotStep  = 8;
+          const dotCY    = y + 5;  // vertical centre of row
+          const dotR     = 2.5;
+          const rightEdge = this.PANEL_W - 18;
+
+          const dotsG = this.scene.add.graphics();
+
+          for (let i = 0; i < maxDots; i++) {
+            const dotX = rightEdge - (maxDots - 1 - i) * dotStep;
+            const owned = i < stacks;
+            if (owned) {
+              // Filled dot in upgrade colour
+              dotsG.fillStyle(def.color, 1);
+              dotsG.fillCircle(dotX, dotCY, dotR);
+            } else {
+              // Hollow outline dot in a dark-muted colour
+              dotsG.lineStyle(1, 0x2a2a5a, 0.9);
+              dotsG.strokeCircle(dotX, dotCY, dotR);
+            }
+          }
+          contentContainer.add(dotsG);
+        }
+
+        // ── Tier dot (far right) ──────────────────────────────────────────
+        const tierDot = this.scene.add.graphics();
+        tierDot.fillStyle(tierColors[def.tier] ?? 0x555577);
+        tierDot.fillCircle(this.PANEL_W - 10, y + 5, 3);
+        contentContainer.add(tierDot);
 
         y += this.LINE_H;
       }
