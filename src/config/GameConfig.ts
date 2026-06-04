@@ -19,6 +19,9 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
   },
   scale: {
     mode:       Phaser.Scale.FIT,
-    autoCenter: Phaser.Scale.CENTER_BOTH,
+    // CSS flexbox on #canvas-mount handles centering exclusively.
+    // CENTER_BOTH injects inline margins that conflict with flex layout,
+    // causing the canvas to shift right on mount.
+    autoCenter: Phaser.Scale.NO_CENTER,
   },
 };

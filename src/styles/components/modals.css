@@ -672,6 +672,19 @@
   background:   rgba(231, 76, 60, 0.12);
 }
 
+.pause-btn--abandon {
+  background:   transparent;
+  color:        var(--text-dim);
+  border-color: var(--border-subtle);
+  font-size:    var(--text-caption);
+  opacity:      0.7;
+}
+.pause-btn--abandon:hover {
+  color:        var(--color-danger, #e74c3c);
+  border-color: var(--color-danger, #e74c3c);
+  opacity:      1;
+}
+
 /* ── Game-over tip ───────────────────────────────────────────────────────── */
 
 .go-tip {

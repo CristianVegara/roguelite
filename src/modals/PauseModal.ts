@@ -118,7 +118,15 @@ export class PauseModal {
       bus.emit({ type: 'pause:quit', payload: {} });
     });
 
-    wrap.append(resume, restart, quit);
+    const abandon = document.createElement('button');
+    abandon.className   = 'pause-btn pause-btn--abandon';
+    abandon.textContent = 'ABANDON RUN';
+    abandon.addEventListener('click', () => {
+      this.close();
+      bus.emit({ type: 'pause:quit', payload: {} });
+    });
+
+    wrap.append(resume, restart, quit, abandon);
     return wrap;
   }
 }

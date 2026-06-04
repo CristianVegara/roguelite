@@ -145,8 +145,26 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.busOffQuit = bus.on('pause:quit', () => {
-      this.scene.resume();
+      // 1. Gate the update loop immediately so syncRunState() can't flip
+      //    isRunActive back to true on the next tick.
+      this.state = 'player_dead';
+
+      // 2. Kill the HUD before the scene teardown fires.
       runState.update({ isRunActive: false });
+
+      // 3. Eagerly unsubscribe all bus listeners (DESTROY will also do this,
+      //    but being explicit avoids any edge-case ordering issues).
+      this.busOffSpeed?.();   this.busOffSpeed   = null;
+      this.busOffPause?.();   this.busOffPause   = null;
+      this.busOffRestart?.(); this.busOffRestart = null;
+      this.busOffQuit?.();    this.busOffQuit    = null;
+
+      // 4. Stop the scene — terminates the RAF loop and fires DESTROY.
+      //    Do NOT call this.scene.resume() first: we want the loop to stay
+      //    dead, not tick once more before stop() lands.
+      this.scene.stop();
+
+      // 5. Navigate the HTML layer after Phaser has stopped.
       router.navigate('home');
     });
 

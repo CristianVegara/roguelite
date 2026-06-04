@@ -40,11 +40,13 @@
 
 /* Phaser injects its canvas here; ensure it scales correctly */
 #canvas-mount canvas {
-  display:      block;
-  /* Phaser.Scale.FIT handles the internal scaling.
-     CSS keeps the canvas centred and never forces a fixed size. */
-  max-width:    100%;
-  max-height:   100%;
+  display:    block;
+  /* Phaser.Scale.FIT handles internal scaling; CSS keeps the canvas
+     centred via the parent flex layout. margin:0 neutralises any
+     inline margins Phaser's Scale Manager may have injected previously. */
+  max-width:  100%;
+  max-height: 100%;
+  margin:     0;
 }
 
 /* ── HTML UI layer ───────────────────────────────────────────────────────── */

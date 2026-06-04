@@ -34,6 +34,10 @@ export class HudLeft {
     const hpPanel = this.buildPlayerHpPanel();
     frame.appendChild(hpPanel);
 
+    // Tab strip — sits immediately below the HP panels, above the arena
+    const tabStrip = this.buildTabStrip();
+    frame.appendChild(tabStrip);
+
     // Bottom bar
     const botbar = this.buildBottomBar();
     frame.appendChild(botbar);
@@ -103,16 +107,8 @@ export class HudLeft {
     return panel;
   }
 
-  private buildBottomBar(): HTMLElement {
-    const bar = el('div', 'hud-botbar');
-
-    this.goldText = el('div', 'hud-gold');
-    this.goldText.textContent = '★ 0';
-
-    const goldLabel = el('div', 'hud-gold-label');
-    goldLabel.textContent = 'GOLD';
-
-    const kbHints = el('div', 'hud-kb-hints');
+  private buildTabStrip(): HTMLElement {
+    const strip = el('div', 'hud-tab-strip');
 
     const buildBtn = el('button', 'hud-action-btn');
     buildBtn.textContent = 'BUILD';
@@ -124,7 +120,18 @@ export class HudLeft {
     statsBtn.title = 'Toggle stats panel (Tab)';
     statsBtn.addEventListener('click', () => bus.emit({ type: 'hud:toggle-stats', payload: {} }));
 
-    kbHints.append(buildBtn, statsBtn);
+    strip.append(buildBtn, statsBtn);
+    return strip;
+  }
+
+  private buildBottomBar(): HTMLElement {
+    const bar = el('div', 'hud-botbar');
+
+    this.goldText = el('div', 'hud-gold');
+    this.goldText.textContent = '★ 0';
+
+    const goldLabel = el('div', 'hud-gold-label');
+    goldLabel.textContent = 'GOLD';
 
     this.relicText = el('div', 'hud-relic-text');
     this.relicText.textContent = 'RELICS: none';
@@ -137,7 +144,7 @@ export class HudLeft {
     this.xpLevel = el('div', 'hud-xp-level');
     this.xpLevel.textContent = 'Lv 0';
 
-    bar.append(goldLabel, this.goldText, kbHints, this.relicText, xpTrack, this.xpLevel);
+    bar.append(goldLabel, this.goldText, this.relicText, xpTrack, this.xpLevel);
     return bar;
   }
 

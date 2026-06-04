@@ -7,8 +7,8 @@
  * - The HUD frame is a 480×640 div centred over the canvas.
  *
  * Responsive scaling:
- * - Phaser is configured with Scale.FIT + CENTER_BOTH, so the canvas is
- *   CSS-scaled to fill the screen while preserving the 480×640 aspect ratio.
+ * - Phaser is configured with Scale.FIT + NO_CENTER; CSS flexbox on
+ *   #canvas-mount exclusively handles centering, preserving the 480×640 ratio.
  * - A ResizeObserver watches the canvas element and applies the same scale
  *   factor to the HUD frame via CSS transform, keeping the two pixel-perfect
  *   aligned on any screen size.
@@ -46,10 +46,19 @@ export class CombatHUD {
     this.right    = new HudRight(this.frame);
     this.modifier = new HudModifierStrip(this.frame);
 
-    // Subscribe to run activity to show/hide the entire HUD root
+    // Subscribe to run activity to show/hide the entire HUD root.
+    // After toggling visibility we re-sync the scale via rAF so the frame
+    // is correctly sized the moment it first appears (the ResizeObserver
+    // won't fire again if the canvas hasn't changed since we last observed).
     this.subs.push(
       runState.subscribe(s => s.isRunActive, (active) => {
         this.root.classList.toggle('is-active', active);
+        if (active) {
+          requestAnimationFrame(() => {
+            const canvas = document.querySelector('#canvas-mount canvas') as HTMLElement | null;
+            if (canvas) this.syncFrameScale(canvas);
+          });
+        }
       }),
     );
 
@@ -101,10 +110,15 @@ export class CombatHUD {
   /**
    * Apply a CSS scale to the HUD frame so it perfectly overlays the canvas.
    * The frame is centred at 50%/50% via CSS; we only need to adjust the scale.
+   *
+   * Uses getBoundingClientRect() rather than clientWidth/clientHeight so the
+   * measurement reflects the canvas's actual painted dimensions — correct
+   * regardless of whether Phaser scales via CSS width/height or transform.
    */
   private syncFrameScale(canvas: HTMLElement): void {
-    const w = canvas.clientWidth;
-    const h = canvas.clientHeight;
+    const rect = canvas.getBoundingClientRect();
+    const w = rect.width;
+    const h = rect.height;
     if (!w || !h) return;
 
     const scale = Math.min(w / GAME_WIDTH, h / GAME_HEIGHT);
