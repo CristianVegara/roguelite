@@ -211,6 +211,8 @@ export class RulesEngine {
   get totalHealingDone(): number  { return this.state.totalHealingDone; }
   get highestDamageHit(): number  { return this.state.highestDamageHit; }
   get totalDamageTaken(): number  { return this.state.totalDamageTaken; }
+  /** Current charge progress for ball_lightning / spark (resets to 0 after proc). */
+  get chargeCounter(): number     { return this.state.chargeCounter; }
   get darkened(): boolean         { return this.state.darkened; }
   get volatile(): boolean         { return this.state.volatile; }
   get enemyRegen(): boolean       { return this.state.enemyRegen; }

@@ -155,6 +155,12 @@ export const ALL_MILESTONES: MilestoneDefinition[] = [
     description: 'Deal 500,000 total damage across all runs',
     check:       (p) => p.total_damage_dealt >= 500_000,
   },
+  {
+    id:          'classic_conqueror',
+    title:       'Conqueror of the Classic',
+    description: 'Complete Classic Mode by clearing Floor 100',
+    check:       (_p, run) => run?.mode_id === 'classic' && run?.won === true,
+  },
 ];
 
 // ---------------------------------------------------------------------------

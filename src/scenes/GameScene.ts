@@ -72,6 +72,8 @@ export class GameScene extends Phaser.Scene {
   private gameSpeed: 1 | 1.5 | 2 = 1;
 
   private overlay!: Phaser.GameObjects.Container;
+  /** Floating proc counter rendered directly above the player sprite. */
+  private hitCounterLabel: Phaser.GameObjects.Text | null = null;
 
   constructor() { super({ key: 'GameScene' }); }
 
@@ -116,6 +118,20 @@ export class GameScene extends Phaser.Scene {
     void this.buildPanel;   // panel is self-managing via B key binding
     this.engine.onFloorStart(this.floorManager.currentModifier);
     this.runStartTime = Date.now();
+
+    // ── Hit counter label (shown above player when proc-every-N talents active) ─
+    this.hitCounterLabel = this.add
+      .text(PLAYER_X, COMBAT_Y - 68, '', {
+        fontSize:        '13px',
+        color:           '#a8d8ff',
+        fontFamily:      'monospace',
+        fontStyle:       'bold',
+        stroke:          '#000000',
+        strokeThickness: 3,
+      })
+      .setOrigin(0.5, 1)
+      .setDepth(50)
+      .setVisible(false);
 
     // ── Bridge: push initial run state so HTML HUD has data from frame 0 ────
     this.syncRunState();
@@ -243,6 +259,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.refreshHpTexts();
+    this.refreshHitCounter();
     this.statsPanel.update();
   }
 
@@ -1082,8 +1099,9 @@ export class GameScene extends Phaser.Scene {
       enemyPoisonStacks: ps?.stacks ?? 0,
       enemyBurnStacks:   (bs && bs.durationMs > 0) ? 1 : 0,
 
-      gold:        this.engine.gold,
-      summonCount: this.player.stats.summonCount ?? 0,
+      gold:           this.engine.gold,
+      summonCount:    this.player.stats.summonCount ?? 0,
+      summonUpgrades: this.computeSummonUpgrades(),
 
       keystoneName: this.detectKeystone() ?? '',
       keystoneId:   this.detectKeystoneId(),
@@ -1096,6 +1114,63 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  // ---------------------------------------------------------------------------
+  // Hit counter label helpers
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Returns a display string for the proc-every-N-hits counter, or null when
+   * no such talent is active (in which case the label should be hidden).
+   *
+   * Priority order:
+   *   1. ball_lightning / spark  — charge counter towards next lightning strike
+   *   2. vital_strike            — hit counter mod 3
+   *   3. areaEveryNHits          — hit counter mod N (Shockwave)
+   *   4. perpetual_machine       — hit streak mod 10
+   */
+  private computeHitCounterDisplay(): string | null {
+    const s = this.player.stats;
+
+    // Lightning charge counter (spark / ball_lightning)
+    if (this.engine.hasUpgrade('spark') || this.engine.hasUpgrade('ball_lightning')) {
+      const threshold = this.engine.hasUpgrade('archmage_class') ? 2 : 3;
+      const charge    = this.engine.chargeCounter;
+      return `⚡ ${charge}/${threshold}`;
+    }
+
+    // Vital Strike: every 3rd hit heals
+    if (this.engine.hasUpgrade('vital_strike')) {
+      const progress = this.engine.hitCount % 3;
+      return `❤ ${progress}/3`;
+    }
+
+    // Shockwave (areaEveryNHits)
+    const everyN = s.areaEveryNHits ?? 0;
+    if (everyN > 0) {
+      const progress = this.engine.hitCount % everyN;
+      return `💥 ${progress}/${everyN}`;
+    }
+
+    // Perpetual Machine: every 10 consecutive unhit attacks
+    if (this.engine.hasUpgrade('perpetual_machine')) {
+      const streak = this.engine.hitStreak % 10;
+      return `🔥 ${streak}/10`;
+    }
+
+    return null;
+  }
+
+  /** Refresh the hit counter label above the player sprite. */
+  private refreshHitCounter(): void {
+    if (!this.hitCounterLabel) return;
+    const text = this.computeHitCounterDisplay();
+    if (text !== null) {
+      this.hitCounterLabel.setText(text).setVisible(true);
+    } else {
+      this.hitCounterLabel.setVisible(false);
+    }
+  }
+
   /** Returns the ID of the keystone upgrade the player currently holds. */
   private detectKeystoneId(): string {
     for (const [id] of this.owned) {
@@ -1103,6 +1178,25 @@ export class GameScene extends Phaser.Scene {
       if (upg) return upg.id;
     }
     return '';
+  }
+
+  /** Upgrade IDs that belong to the summon kit — drives the mini-entity panel. */
+  private static readonly SUMMON_UPGRADE_IDS = new Set([
+    'familiar', 'pack_leader', 'coordinated_strike', 'lich_form',
+  ]);
+
+  /**
+   * Returns owned stacks for summon-category upgrades only.
+   * Pushed to RunStateStore so HudRight can render the mini-entity panel.
+   */
+  private computeSummonUpgrades(): Record<string, number> {
+    const result: Record<string, number> = {};
+    for (const [id, stacks] of this.owned) {
+      if (GameScene.SUMMON_UPGRADE_IDS.has(id)) {
+        result[id] = stacks;
+      }
+    }
+    return result;
   }
 
   /**

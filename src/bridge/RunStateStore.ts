@@ -52,6 +52,8 @@ export interface RunState {
 
   // ── Summons ──────────────────────────────────────────────────────────────
   summonCount:    number;
+  /** Owned stacks for each summon-category upgrade (id → stacks). Empty when no summons. */
+  summonUpgrades: Record<string, number>;
 
   // ── Build ────────────────────────────────────────────────────────────────
   keystoneName:   string;   // '' if no keystone held
@@ -96,6 +98,7 @@ const DEFAULT_STATE: RunState = {
 
   gold:              0,
   summonCount:       0,
+  summonUpgrades:    {},
 
   keystoneName:      '',
   keystoneId:        '',
