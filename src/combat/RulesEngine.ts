@@ -108,6 +108,7 @@ interface EngineState {
   totalDamageDealt:     number;
   totalHealingDone:     number;
   highestDamageHit:     number;
+  totalDamageTaken:     number;
 }
 
 function freshState(): EngineState {
@@ -128,6 +129,7 @@ function freshState(): EngineState {
     playerSpeedMult: 1.0,
     bossesKilled: 0,
     totalDamageDealt: 0, totalHealingDone: 0, highestDamageHit: 0,
+    totalDamageTaken: 0,
   };
 }
 
@@ -208,6 +210,7 @@ export class RulesEngine {
   get totalDamageDealt(): number  { return this.state.totalDamageDealt; }
   get totalHealingDone(): number  { return this.state.totalHealingDone; }
   get highestDamageHit(): number  { return this.state.highestDamageHit; }
+  get totalDamageTaken(): number  { return this.state.totalDamageTaken; }
   get darkened(): boolean         { return this.state.darkened; }
   get volatile(): boolean         { return this.state.volatile; }
   get enemyRegen(): boolean       { return this.state.enemyRegen; }
@@ -569,6 +572,9 @@ export class RulesEngine {
     }
 
     result.damageTaken = Math.max(0, Math.floor(mitigated));
+
+    // Track total damage taken for the run (used by HP Up talent retroactive calc)
+    this.state.totalDamageTaken += result.damageTaken;
 
     // Vampiric enemy: heals 8% of damage it deals
     if (this.state.vampiricEnemy && result.damageTaken > 0) {

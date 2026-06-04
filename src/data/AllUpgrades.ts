@@ -200,6 +200,45 @@ const DEFENSE: UpgradeDefinition[] = [
     apply: (s) => { s.armor += 12; },
   },
   {
+    id: 'hp_up', name: 'HP Up',
+    description: 'Retroactively convert 20% of all damage taken this run into permanent Max HP. Going forward, every 5 damage taken also grants +1 Max HP.',
+    flavour: '"Pain is just experience your body hasn\'t priced in yet."',
+    category: 'defense', tier: 'synergy', rarity: 'uncommon',
+    color: DEF_COLOR, maxStacks: 1, tags: ['defense', 'hp', 'reactive'],
+    apply: (s, e) => {
+      reg(e, 'hp_up');
+
+      // ── Retroactive component ─────────────────────────────────────────────
+      // Convert 20% of all damage the player has taken so far into Max HP.
+      const retroBonus = Math.floor(e.totalDamageTaken * 0.20);
+      if (retroBonus > 0) {
+        s.maxHp += retroBonus;
+        s.hp     = Math.min(s.maxHp, s.hp + retroBonus);
+      }
+
+      // ── Ongoing component ─────────────────────────────────────────────────
+      // Accumulate 0.20 HP per point of damage taken from here on.
+      // When the float accumulator reaches a whole number, grant that HP as
+      // permanent Max HP (and also restore it to current HP).
+      // The accumulator lives in relicData so it persists across floors.
+      const data = e.getRelicData('hp_up');
+      data['accumulator'] = 0;
+
+      e.registerDefenseTrigger('hp_up_ongoing', (ctx) => {
+        if (ctx.result.damageTaken <= 0) return;
+        const d    = ctx.engine.getRelicData('hp_up');
+        const prev = (d['accumulator'] as number) ?? 0;
+        const next = prev + ctx.result.damageTaken * 0.20;
+        const grant = Math.floor(next);
+        d['accumulator'] = next - grant;
+        if (grant > 0) {
+          ctx.stats.maxHp += grant;
+          ctx.stats.hp     = Math.min(ctx.stats.maxHp, ctx.stats.hp + grant);
+        }
+      });
+    },
+  },
+  {
     id: 'reactive_plating', name: 'Reactive Plating',
     description: 'Each time you take damage, gain 1 armor. Armor gained this way is permanent for the entire run.',
     category: 'defense', tier: 'starter', rarity: 'uncommon',
