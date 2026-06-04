@@ -939,35 +939,30 @@ export class GameScene extends Phaser.Scene {
   }
 
   private drawBackground(): void {
-    // ── Background image (covers the full canvas) ────────────────────────────
-    if (this.textures.exists('background')) {
-      const bg = this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'background');
-      // Scale to cover the canvas exactly, preserving aspect ratio if needed
-      bg.setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
-      bg.setDepth(-1);
-    }
-
-    // ── UI chrome drawn on top of the image ──────────────────────────────────
     const g = this.add.graphics();
 
-    // Top bar — semi-transparent dark overlay so HUD text stays readable
-    g.fillStyle(0x0c0c1e, 0.82);
+    // Base background fill
+    g.fillStyle(0x0d0d1f);
+    g.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+
+    // Top bar surface
+    g.fillStyle(0x0c0c1e);
     g.fillRect(0, 0, GAME_WIDTH, HEADER_H);
     g.lineStyle(1, 0x1e1e36);
     g.lineBetween(0, HEADER_H, GAME_WIDTH, HEADER_H);
 
-    // Bottom info bar — semi-transparent
-    g.fillStyle(0x0b0b1c, 0.82);
+    // Bottom info bar surface
+    g.fillStyle(0x0b0b1c);
     g.fillRect(0, BOT_BAR_Y, GAME_WIDTH, GAME_HEIGHT - BOT_BAR_Y);
     g.lineStyle(1, 0x1a1a30);
     g.lineBetween(0, BOT_BAR_Y, GAME_WIDTH, BOT_BAR_Y);
 
     // Subtle arena ground line
-    g.lineStyle(1, 0x1e1e36, 0.6);
+    g.lineStyle(1, 0x1e1e36);
     g.lineBetween(16, COMBAT_Y + 44, GAME_WIDTH - 16, COMBAT_Y + 44);
 
     // Player / enemy zone divider (very subtle)
-    g.lineStyle(1, 0x111120, 0.5);
+    g.lineStyle(1, 0x111120);
     g.lineBetween(GAME_WIDTH / 2, HP_PANEL_Y + HP_PANEL_H + 4, GAME_WIDTH / 2, BOT_BAR_Y - 4);
   }
 
