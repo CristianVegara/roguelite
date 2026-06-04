@@ -36,6 +36,8 @@ export interface GameModeRules {
   forceRandomRelics:      number;
   /** Boss floors still appear normally */
   noFloorCap:             boolean;   // flag for leaderboard display only; FloorManager already scales forever
+  /** Hard floor cap for the mode. null = no cap (run ends only on death). */
+  floorCap:               number | null;
 
   // ── Boss Rush ──────────────────────────────────────────────────────────────
   /** Every floor is a boss; regular floor logic and modifiers are bypassed. */
@@ -89,6 +91,7 @@ const DEFAULT_RULES: GameModeRules = {
   disableLifesteal:       false,
   forceRandomRelics:      0,
   noFloorCap:             false,
+  floorCap:               null,
   bossesOnly:             false,
   enemyHpMultiplier:      1,
   enemyDamageMultiplier:  1,
@@ -111,7 +114,7 @@ export const MODES_REGISTRY: GameModeConfig[] = [
     color:      0x4fc3f7,
     difficulty: 'normal',
     isAvailable: () => true,
-    rules:      { ...DEFAULT_RULES },
+    rules:      { ...DEFAULT_RULES, floorCap: 100 },
     scoring:    { formula: 'floor', displayLabel: 'Floor reached' },
     rewards:    { currencyMultiplier: 1.0 },
     leaderboard: { id: 'classic_all_time' },

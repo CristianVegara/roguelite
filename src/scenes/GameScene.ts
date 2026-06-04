@@ -50,6 +50,9 @@ export class GameScene extends Phaser.Scene {
   private killCount     = 0;
   private bossKillCount = 0;
   private xpManager!:   XPManager;
+  /** Set to true only when the player achieves a deliberate win (e.g. Classic floor cap).
+   *  Kept false on all deaths so onPlayerDead() never mis-reports a win. */
+  private _runWon = false;
 
   // Pending flags set by XP events; consumed in onFloorClear
   private pendingLevelUpUpgrade = false;
@@ -91,6 +94,7 @@ export class GameScene extends Phaser.Scene {
     this.ownedRelics         = new Set();
     this.pendingLevelUpUpgrade = false;
     this.pendingBossUpgrade    = false;
+    this._runWon               = false;
     this.drawBackground();
     this.createEntities();
 
@@ -455,6 +459,12 @@ export class GameScene extends Phaser.Scene {
       isBoss: this.enemy.isBoss,
     }});
 
+    // Classic Mode (and any mode with a floorCap): trigger win on completing the cap floor.
+    if (rules.floorCap !== null && floor >= rules.floorCap) {
+      this.onRunWon();
+      return;
+    }
+
     // Boss Rush keeps its own cadence (upgrade + relic every 3 bosses).
     // Standard mode: upgrades come from LEVEL-UPS and BOSS KILLS only.
     // Relic floors remain floor-based (FloorManager decides).
@@ -474,8 +484,12 @@ export class GameScene extends Phaser.Scene {
     // 500 ms pause so kill floaters settle before the overlay appears,
     // then 900 ms on the overlay before the upgrade / relic / next-floor prompt.
     this.time.delayedCall(500, () => {
+      // Guard: if the scene was torn down or the run ended mid-delay, abort.
+      if (this.state !== 'floor_clear') return;
       this.showFloorClearOverlay(floor);
       this.time.delayedCall(900, () => {
+        // Guard: same check for the inner callback.
+        if (this.state !== 'floor_clear') return;
         if (doUpgrade)         this.launchUpgradeScreen();
         else if (isRelicFloor) this.launchRelicScreen();
         else                   this.advanceFloor();
@@ -777,6 +791,16 @@ export class GameScene extends Phaser.Scene {
     this.syncRunState();
   }
 
+  /**
+   * Called when the player achieves a deliberate win condition (e.g. Classic
+   * Mode floor cap). Sets the _runWon flag then delegates to onPlayerDead()
+   * so the single run-recording path handles everything.
+   */
+  private onRunWon(): void {
+    this._runWon = true;
+    this.onPlayerDead();
+  }
+
   private onPlayerDead(): void {
     // Clear any residual boss label so it doesn't linger on the game-over overlay
     this.currentEnemyName = 'ENEMY';
@@ -812,7 +836,7 @@ export class GameScene extends Phaser.Scene {
       highest_hit:     this.engine.highestDamageHit,
       duration_ms:     durationMs,
       date:            new Date().toISOString(),
-      won:             floor >= 20,
+      won:             this._runWon,
     };
 
     const { newTitles } = ServiceLocator.profile.recordRunEnd(run);
@@ -898,30 +922,35 @@ export class GameScene extends Phaser.Scene {
   }
 
   private drawBackground(): void {
+    // ── Background image (covers the full canvas) ────────────────────────────
+    if (this.textures.exists('background')) {
+      const bg = this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'background');
+      // Scale to cover the canvas exactly, preserving aspect ratio if needed
+      bg.setDisplaySize(GAME_WIDTH, GAME_HEIGHT);
+      bg.setDepth(-1);
+    }
+
+    // ── UI chrome drawn on top of the image ──────────────────────────────────
     const g = this.add.graphics();
 
-    // Base background
-    g.fillStyle(0x0d0d1f);
-    g.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-
-    // Top bar surface
-    g.fillStyle(0x0c0c1e);
+    // Top bar — semi-transparent dark overlay so HUD text stays readable
+    g.fillStyle(0x0c0c1e, 0.82);
     g.fillRect(0, 0, GAME_WIDTH, HEADER_H);
     g.lineStyle(1, 0x1e1e36);
     g.lineBetween(0, HEADER_H, GAME_WIDTH, HEADER_H);
 
-    // Bottom info bar surface
-    g.fillStyle(0x0b0b1c);
+    // Bottom info bar — semi-transparent
+    g.fillStyle(0x0b0b1c, 0.82);
     g.fillRect(0, BOT_BAR_Y, GAME_WIDTH, GAME_HEIGHT - BOT_BAR_Y);
     g.lineStyle(1, 0x1a1a30);
     g.lineBetween(0, BOT_BAR_Y, GAME_WIDTH, BOT_BAR_Y);
 
     // Subtle arena ground line
-    g.lineStyle(1, 0x1e1e36);
+    g.lineStyle(1, 0x1e1e36, 0.6);
     g.lineBetween(16, COMBAT_Y + 44, GAME_WIDTH - 16, COMBAT_Y + 44);
 
     // Player / enemy zone divider (very subtle)
-    g.lineStyle(1, 0x111120);
+    g.lineStyle(1, 0x111120, 0.5);
     g.lineBetween(GAME_WIDTH / 2, HP_PANEL_Y + HP_PANEL_H + 4, GAME_WIDTH / 2, BOT_BAR_Y - 4);
   }
 

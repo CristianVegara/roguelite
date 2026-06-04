@@ -407,7 +407,7 @@ export class RulesEngine {
       const summonBase = dmg * (s.summonDamagePercent ?? 0.2);
       // Coordinated Strike: crit → all summons attack simultaneously
       const summonMult = (isCrit && this.hasUpgrade('coordinated_strike')) ? sc : 1;
-      result.summonDamage = Math.floor(summonBase * summonMult);
+      result.summonDamage = Math.max(1, Math.floor(summonBase * summonMult));
       if (result.summonDamage > 0) {
         result.floaters.push({ value: result.summonDamage, type: 'summon', target: 'enemy' });
       }
@@ -459,7 +459,7 @@ export class RulesEngine {
     if (isCrit && this.hasUpgrade('thunder_engine')) lightningProc = true;
 
     if (lightningProc) {
-      const lDmg = Math.floor(dmg * (s.lightningDamage ?? 0.5));
+      const lDmg = Math.max(1, Math.floor(dmg * (s.lightningDamage ?? 0.5)));
       result.lightningDamage = lDmg;
       result.floaters.push({ value: lDmg, type: 'lightning', target: 'enemy' });
     }
@@ -467,11 +467,11 @@ export class RulesEngine {
     // ── 9. Area damage ───────────────────────────────────────────────────
     const areaFrac = s.areaPercent ?? 0;
     if (areaFrac > 0) {
-      result.areaDamage += Math.floor(dmg * areaFrac);
+      result.areaDamage += Math.max(1, Math.floor(dmg * areaFrac));
     }
     const everyN = s.areaEveryNHits ?? 0;
     if (everyN > 0 && this.state.hitCounter % everyN === 0) {
-      result.areaDamage += Math.floor(dmg * 0.4); // Shockwave: 40%
+      result.areaDamage += Math.max(1, Math.floor(dmg * 0.4)); // Shockwave: 40%
     }
     if (result.areaDamage > 0) {
       result.floaters.push({ value: result.areaDamage, type: 'area', target: 'enemy' });

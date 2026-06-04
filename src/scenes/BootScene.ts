@@ -20,8 +20,7 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload(): void {
-    // Phase 1: no external assets.
-    // Subsequent phases will call this.load.image / this.load.audio here.
+    this.load.image('background', 'images/background/background.png');
   }
 
   create(): void {
