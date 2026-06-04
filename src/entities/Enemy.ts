@@ -26,12 +26,13 @@ export class Enemy {
   private readonly scene: Phaser.Scene;
   private readonly sprite: Phaser.GameObjects.Image;
   private readonly healthBar: HealthBar;
+  private readonly baseX: number;
   private attackTimer: number;
 
   constructor(scene: Phaser.Scene, x: number, y: number, config?: EnemyConfig) {
     this.scene = scene;
+    this.baseX = x;
     this.isBoss = config?.isBoss ?? false;
-    const bossLabel = config?.bossLabel ?? '';
     this.stats = config ? { ...config.stats } : { ...ENEMY_BASE_STATS };
     this.statusEffects = createEmptyStatusEffects();
 
@@ -44,12 +45,7 @@ export class Enemy {
     const barY     = this.isBoss ? y - 50 : y - 40;
     this.healthBar = new HealthBar(scene, x, barY, barWidth, 9);
 
-    if (this.isBoss && bossLabel) {
-      scene.add.text(x, barY - 14, bossLabel, {
-        fontSize: '11px', color: '#ffd700',
-        fontFamily: 'monospace', fontStyle: 'bold',
-      }).setOrigin(0.5, 0.5);
-    }
+    // Boss name label is now displayed only in the HUD header — no sprite label.
   }
 
   get x(): number { return this.sprite.x; }
@@ -151,8 +147,10 @@ export class Enemy {
   // ---------------------------------------------------------------------------
 
   private playAttackAnim(): void {
+    // Always tween from baseX so stacked attacks can't accumulate drift.
+    this.sprite.x = this.baseX;
     this.scene.tweens.add({
-      targets: this.sprite, x: this.sprite.x - 14,
+      targets: this.sprite, x: this.baseX - 14,
       duration: 70, yoyo: true, ease: 'Power2',
     });
   }

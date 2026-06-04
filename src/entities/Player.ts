@@ -22,10 +22,12 @@ export class Player {
   private readonly scene: Phaser.Scene;
   private readonly sprite: Phaser.GameObjects.Image;
   private readonly healthBar: HealthBar;
+  private readonly baseX: number;
   private attackTimer = 0;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     this.scene = scene;
+    this.baseX = x;
     this.stats = { ...PLAYER_BASE_STATS };
     this.sprite    = scene.add.image(x, y, 'player');
     this.healthBar = new HealthBar(scene, x, y - 44, 70, 9);
@@ -76,8 +78,10 @@ export class Player {
   // ---------------------------------------------------------------------------
 
   private playAttackAnim(): void {
+    // Always tween from baseX so stacked attacks can't accumulate drift.
+    this.sprite.x = this.baseX;
     this.scene.tweens.add({
-      targets: this.sprite, x: this.sprite.x + 14,
+      targets: this.sprite, x: this.baseX + 14,
       duration: 70, yoyo: true, ease: 'Power2',
     });
   }
