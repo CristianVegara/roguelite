@@ -440,7 +440,8 @@ export class RulesEngine {
 
     // ── 8. Lightning proc ────────────────────────────────────────────────
     let lightningProc = false;
-    if (this.hasUpgrade('ball_lightning')) {
+    if (this.hasUpgrade('ball_lightning') || this.hasUpgrade('spark')) {
+      // ball_lightning and spark both use a charge-counter model (fire every N attacks)
       // Archmage class fires every 2 attacks; normally every 3
       const threshold = this.hasUpgrade('archmage_class') ? 2 : 3;
       this.state.chargeCounter++;
@@ -832,10 +833,10 @@ export class RulesEngine {
     }
   }
 
-  /** Store overkill damage for Overflow. */
+  /** Store overkill damage for Overflow. Capped at 1 billion to prevent crash at extreme values. */
   storeOverkill(overkill: number): void {
     if (this.hasUpgrade('overflow') && overkill > 0) {
-      this.state.overflowStored = overkill;
+      this.state.overflowStored = Math.min(overkill, 1_000_000_000);
     }
   }
 

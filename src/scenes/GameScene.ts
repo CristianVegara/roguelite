@@ -246,7 +246,11 @@ export class GameScene extends Phaser.Scene {
     }
 
     // Thorned / Mirrored floor modifier: player takes recoil
-    const recoil = result.thornDamage + result.mirrorDamage;
+    // Mirror reflects respect player armor; thorn damage is fixed
+    const mirrorAfterArmor = result.mirrorDamage > 0
+      ? Math.max(0, result.mirrorDamage - (this.player.stats.armor ?? 0))
+      : 0;
+    const recoil = result.thornDamage + mirrorAfterArmor;
     if (recoil > 0) {
       this.player.takeDamage(recoil);
       this.spawnFloater(this.player.x, this.player.y - 20, recoil, 'reflect');
@@ -301,6 +305,18 @@ export class GameScene extends Phaser.Scene {
   // ---------------------------------------------------------------------------
 
   private handleEnemyKill(): void {
+    // Guard: if player died from recoil/mirror on the same hit that killed the enemy,
+    // don't advance the floor — that would let the merchant "resurrect" the player.
+    if (this.player.isDead()) {
+      if (!this.engine.checkPhoenix()) {
+        this.transition('player_dead');
+      } else {
+        this.player.stats.hp = 1;
+        this.player.takeDamage(0);
+      }
+      return;
+    }
+
     this.killCount++;
 
     const isBoss = this.enemy.isBoss;
@@ -323,17 +339,13 @@ export class GameScene extends Phaser.Scene {
       this.xpManager.killXP(this.floorManager.currentFloor);
     }
 
-    // Volatile modifier: enemy explodes on death
+    // Volatile modifier: enemy explodes on death — never drops player below 5% HP
     if (this.engine.volatile && this.enemy.stats.maxHp > 0) {
+      const minHp    = Math.max(1, Math.ceil(this.player.stats.maxHp * 0.05));
       const explosion = Math.floor(this.enemy.stats.maxHp * 0.25);
-      this.player.takeDamage(explosion);
-      this.spawnFloater(this.player.x, this.player.y - 30, explosion, 'burn');
-      if (this.player.isDead() && !this.engine.checkPhoenix()) {
-        this.transition('player_dead');
-        return;
-      } else if (this.player.isDead()) {
-        this.player.stats.hp = 1;
-      }
+      const capped    = Math.min(explosion, Math.max(0, this.player.stats.hp - minHp));
+      this.player.takeDamage(capped);
+      this.spawnFloater(this.player.x, this.player.y - 30, capped, 'burn');
     }
 
     // Cursed floor modifier: bonus gold on kill
