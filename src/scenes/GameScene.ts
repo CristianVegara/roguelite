@@ -177,6 +177,7 @@ export class GameScene extends Phaser.Scene {
           this.player.takeDamage(0);
         } else {
           this.transition('player_dead');
+          return; // don't let refreshHpTexts re-enable the HUD this frame
         }
       }
     }
@@ -367,6 +368,8 @@ export class GameScene extends Phaser.Scene {
       const relicBonus = this.ownedRelics.size * 3;
       this.engine.addGold(relicBonus);
     }
+    // Sync gold to HUD immediately so it reflects kill-gold before floor-clear overlay
+    runState.update({ gold: this.engine.gold });
 
     const killResult = this.engine.onEnemyKilled(this.enemy);
     if (killResult.pendingHeal > 0) {
@@ -599,6 +602,7 @@ export class GameScene extends Phaser.Scene {
 
     const gold = mod.bonusRewards?.gold ?? 40;
     this.engine.addGold(gold);
+    this.syncRunState(); // immediately reflect new gold in HUD
 
     const bg = this.add.graphics();
     bg.fillStyle(0x000000, 0.85);
@@ -961,7 +965,7 @@ export class GameScene extends Phaser.Scene {
     const cfg = getRunConfig();
 
     runState.update({
-      isRunActive: true,
+      isRunActive: this.state !== 'player_dead',
       floor:       this.floorManager.currentFloor,
       isBoss:      this.enemy?.isBoss ?? false,
 
