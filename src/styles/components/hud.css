@@ -13,13 +13,18 @@
 /* ── Frame ───────────────────────────────────────────────────────────────── */
 
 .hud-frame {
-  position:  absolute;
-  width:     480px;
-  height:    640px;
-  left:      50%;
-  top:       50%;
-  transform: translate(-50%, -50%);
-  pointer-events: none;
+  position:         absolute;
+  width:            480px;
+  height:           640px;
+  left:             50%;
+  top:              50%;
+  /* transform is set dynamically by CombatHUD.syncFrameScale()
+     to translate(-50%,-50%) scale(factor), keeping the frame pixel-aligned
+     with the Phaser canvas at any screen size. The initial value covers
+     the instant before the ResizeObserver fires. */
+  transform:        translate(-50%, -50%);
+  transform-origin: 50% 50%;
+  pointer-events:   none;
 }
 
 /* ── Top bar ─────────────────────────────────────────────────────────────── */

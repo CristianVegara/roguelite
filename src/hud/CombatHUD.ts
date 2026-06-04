@@ -6,16 +6,21 @@
  * - Speed button clicks emit to GameEventBus (GameScene listens).
  * - The HUD frame is a 480×640 div centred over the canvas.
  *
+ * Responsive scaling:
+ * - Phaser is configured with Scale.FIT + CENTER_BOTH, so the canvas is
+ *   CSS-scaled to fill the screen while preserving the 480×640 aspect ratio.
+ * - A ResizeObserver watches the canvas element and applies the same scale
+ *   factor to the HUD frame via CSS transform, keeping the two pixel-perfect
+ *   aligned on any screen size.
+ *
  * Lifecycle:
  * - Instantiate once from main.ts; it is self-managing.
  * - Shows automatically when runState.isRunActive becomes true.
  * - Hides automatically when it becomes false.
- *
- * M4 note: the Phaser HUD and this HTML HUD are both visible simultaneously
- * for comparison. Run M5 to delete the Phaser HUD.
  */
 
 import { runState } from '../bridge/RunStateStore';
+import { GAME_WIDTH, GAME_HEIGHT } from '../config/GameConstants';
 import { HudLeft }           from './HudLeft';
 import { HudRight }          from './HudRight';
 import { HudModifierStrip }  from './HudModifierStrip';
@@ -29,6 +34,7 @@ export class CombatHUD {
   private modifier: HudModifierStrip;
 
   private subs: Array<() => void> = [];
+  private canvasObserver: ResizeObserver | null = null;
 
   constructor() {
     this.root  = document.getElementById('hud-root')!;
@@ -46,6 +52,9 @@ export class CombatHUD {
         this.root.classList.toggle('is-active', active);
       }),
     );
+
+    // Keep HUD frame scaled to match the Phaser canvas at all times
+    this.attachCanvasObserver();
   }
 
   /** Tear down all subscriptions. Call if the HUD is ever removed from the DOM. */
@@ -54,12 +63,51 @@ export class CombatHUD {
     this.left.destroy();
     this.right.destroy();
     this.modifier.destroy();
+    this.canvasObserver?.disconnect();
     this.frame.remove();
   }
+
+  // ── Private ────────────────────────────────────────────────────────────────
 
   private createFrame(): HTMLElement {
     const frame = document.createElement('div');
     frame.className = 'hud-frame';
     return frame;
+  }
+
+  /**
+   * Watch the Phaser canvas element. When Phaser's Scale Manager resizes it
+   * (Scale.FIT mode changes its CSS dimensions), scale the HUD frame to match.
+   *
+   * The canvas may not exist yet when the HUD is constructed (Phaser boots
+   * asynchronously), so we poll briefly until it appears.
+   */
+  private attachCanvasObserver(): void {
+    const attach = () => {
+      const canvas = document.querySelector('#canvas-mount canvas') as HTMLElement | null;
+      if (!canvas) {
+        setTimeout(attach, 100);
+        return;
+      }
+
+      this.canvasObserver = new ResizeObserver(() => this.syncFrameScale(canvas));
+      this.canvasObserver.observe(canvas);
+      // Fire once immediately in case the canvas is already the right size
+      this.syncFrameScale(canvas);
+    };
+    attach();
+  }
+
+  /**
+   * Apply a CSS scale to the HUD frame so it perfectly overlays the canvas.
+   * The frame is centred at 50%/50% via CSS; we only need to adjust the scale.
+   */
+  private syncFrameScale(canvas: HTMLElement): void {
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    if (!w || !h) return;
+
+    const scale = Math.min(w / GAME_WIDTH, h / GAME_HEIGHT);
+    this.frame.style.transform = `translate(-50%, -50%) scale(${scale})`;
   }
 }

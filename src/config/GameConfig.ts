@@ -11,14 +11,14 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
   width:  GAME_WIDTH,
   height: GAME_HEIGHT,
   backgroundColor: '#080812',
-  // Scene order: first in array is started first (BootScene).
-  // All hub/modal scenes migrated to HTML in M6–M11. Only combat remains in Phaser.
   scene: [BootScene, GameScene],
-  // Mount the canvas inside the dedicated HTML shell slot.
-  // The Router shows/hides #canvas-mount when navigating to/from 'combat'.
   parent: 'canvas-mount',
   physics: {
     default: 'arcade',
     arcade: { debug: false },
+  },
+  scale: {
+    mode:       Phaser.Scale.FIT,
+    autoCenter: Phaser.Scale.CENTER_BOTH,
   },
 };
