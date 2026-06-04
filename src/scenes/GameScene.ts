@@ -18,6 +18,9 @@ import { XPManager }    from '../combat/XPManager';
 // ── Bridge ────────────────────────────────────────────────────────────────────
 import { bus }      from '../bridge/GameEventBus';
 import { runState } from '../bridge/RunStateStore';
+import { startRun } from '../bridge/startRun';
+import { router }   from '../router/Router';
+import { ModeId }   from '../modes/GameModeConfig';
 
 type CombatState = 'fighting' | 'floor_clear' | 'player_dead' | 'special_floor';
 
@@ -57,6 +60,10 @@ export class GameScene extends Phaser.Scene {
   private currentEnemyName = 'ENEMY';
   /** Unsubscribe handle for the bus speed:change listener. */
   private busOffSpeed: (() => void) | null = null;
+  /** Unsubscribe handles for pause-menu bus listeners. */
+  private busOffPause:   (() => void) | null = null;
+  private busOffRestart: (() => void) | null = null;
+  private busOffQuit:    (() => void) | null = null;
 
   // Speed controls (×1, ×1.5, ×2)
   private gameSpeed: 1 | 1.5 | 2 = 1;
@@ -114,10 +121,37 @@ export class GameScene extends Phaser.Scene {
       this.setGameSpeed(e.payload.speed);
     });
 
-    // Clean up the bus listener when this scene is destroyed
+    // ── M key → open pause menu ───────────────────────────────────────────────
+    this.input.keyboard?.on('keydown-M', () => {
+      if (this.state === 'fighting') {
+        this.scene.pause();
+        bus.emit({ type: 'pause:open', payload: {} });
+      }
+    });
+
+    // ── Pause menu bus responses ──────────────────────────────────────────────
+    this.busOffPause = bus.on('pause:resume', () => {
+      this.scene.resume();
+    });
+
+    this.busOffRestart = bus.on('pause:restart', () => {
+      const cfg = getRunConfig();
+      this.scene.resume();
+      startRun({ modeId: cfg.modeId as ModeId, classId: cfg.classId });
+    });
+
+    this.busOffQuit = bus.on('pause:quit', () => {
+      this.scene.resume();
+      runState.update({ isRunActive: false });
+      router.navigate('home');
+    });
+
+    // Clean up all bus listeners when this scene is destroyed
     this.events.once(Phaser.Scenes.Events.DESTROY, () => {
-      this.busOffSpeed?.();
-      this.busOffSpeed = null;
+      this.busOffSpeed?.();   this.busOffSpeed   = null;
+      this.busOffPause?.();   this.busOffPause   = null;
+      this.busOffRestart?.(); this.busOffRestart = null;
+      this.busOffQuit?.();    this.busOffQuit    = null;
     });
   }
 

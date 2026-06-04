@@ -42,11 +42,11 @@ class ClassSelectScreen {
       this.buildGrid(),
     );
 
-    // ESC / B → back
+    // ESC / B → back (but never during combat — listener may outlive this screen)
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape' || e.key === 'b' || e.key === 'B') {
         document.removeEventListener('keydown', onKey);
-        router.back();
+        if (router.getCurrent()?.name !== 'combat') router.back();
       }
     };
     document.addEventListener('keydown', onKey);

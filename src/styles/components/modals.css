@@ -1,6 +1,6 @@
 /**
  * modals.css — Shared modal chrome + UpgradeModal, RelicModal, MerchantModal,
- *              GameOverModal styles (M8–M10).
+ *              GameOverModal, PauseModal styles.
  * Uses design tokens. M13 applies full visual-identity polish.
  */
 
@@ -582,4 +582,92 @@
 .um-skip-btn:hover {
   color:        var(--text-secondary);
   border-color: var(--border-default);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PAUSE MODAL
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.pause-panel {
+  display:          flex;
+  flex-direction:   column;
+  align-items:      center;
+  gap:              var(--space-6);
+  background:       var(--bg-panel);
+  border:           1px solid var(--border-default);
+  border-radius:    var(--radius-lg);
+  padding:          var(--space-8) var(--space-10);
+  min-width:        260px;
+}
+
+.pause-title-wrap {
+  display:        flex;
+  flex-direction: column;
+  align-items:    center;
+  gap:            var(--space-1);
+}
+
+.pause-title {
+  font-family:    var(--font-mono);
+  font-size:      var(--text-xl);
+  font-weight:    var(--weight-heading);
+  letter-spacing: var(--ls-heading);
+  color:          var(--text-primary);
+}
+
+.pause-hint {
+  font-family:    var(--font-mono);
+  font-size:      var(--text-caption);
+  color:          var(--text-dim);
+  letter-spacing: var(--ls-label);
+}
+
+.pause-buttons {
+  display:        flex;
+  flex-direction: column;
+  gap:            var(--space-3);
+  width:          100%;
+}
+
+.pause-btn {
+  width:          100%;
+  padding:        var(--space-3) var(--space-6);
+  border-radius:  var(--radius-md);
+  font-family:    var(--font-mono);
+  font-size:      var(--text-sm);
+  font-weight:    var(--weight-label);
+  letter-spacing: var(--ls-label);
+  cursor:         pointer;
+  border:         1px solid transparent;
+  transition:     background var(--transition-fast), color var(--transition-fast),
+                  border-color var(--transition-fast);
+}
+
+.pause-btn--resume {
+  background:   var(--accent-primary);
+  color:        var(--bg-base);
+  border-color: var(--accent-primary);
+}
+.pause-btn--resume:hover {
+  background:   var(--accent-primary-hover, #5dd3ff);
+  border-color: var(--accent-primary-hover, #5dd3ff);
+}
+
+.pause-btn--restart {
+  background:   transparent;
+  color:        var(--text-secondary);
+  border-color: var(--border-default);
+}
+.pause-btn--restart:hover {
+  color:        var(--text-primary);
+  border-color: var(--border-highlight);
+}
+
+.pause-btn--quit {
+  background:   transparent;
+  color:        var(--color-danger, #e74c3c);
+  border-color: var(--color-danger, #e74c3c);
+}
+.pause-btn--quit:hover {
+  background:   rgba(231, 76, 60, 0.12);
 }

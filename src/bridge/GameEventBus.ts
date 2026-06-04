@@ -78,6 +78,12 @@ export interface BusEvents {
   /** HTML speed buttons emit this; GameScene listens and calls setGameSpeed(). */
   'speed:change': { speed: 1 | 1.5 | 2 };
 
+  // ── Pause menu ───────────────────────────────────────────────────────────
+  'pause:open':   Record<string, never>;  // Phaser → HTML (M key pressed)
+  'pause:resume': Record<string, never>;  // HTML → Phaser (Resume clicked)
+  'pause:restart': Record<string, never>; // HTML → Phaser (Restart clicked)
+  'pause:quit':   Record<string, never>;  // HTML → Phaser (Quit clicked)
+
   // ── Navigation ────────────────────────────────────────────────────────────
   'run:start-requested': Record<string, never>;  // HTML → Phaser to begin
   'run:return-to-hub':   Record<string, never>;  // HTML → app shell

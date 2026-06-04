@@ -6,6 +6,7 @@ import { UpgradeModal }    from './modals/UpgradeModal';
 import { RelicModal }      from './modals/RelicModal';
 import { MerchantModal }   from './modals/MerchantModal';
 import { GameOverModal }   from './modals/GameOverModal';
+import { PauseModal }     from './modals/PauseModal';
 import { createHomeScreen }        from './screens/HomeScreen';
 import { createClassSelectScreen } from './screens/ClassSelectScreen';
 import { createStatsScreen }       from './screens/StatsScreen';
@@ -31,6 +32,7 @@ new UpgradeModal();
 new RelicModal();
 new MerchantModal();
 new GameOverModal();
+new PauseModal();
 
 // ── Phaser layer: create the game instance ───────────────────────────────────
 const phaserGame = new Phaser.Game(gameConfig);
