@@ -833,10 +833,12 @@ export class RulesEngine {
     }
   }
 
-  /** Store overkill damage for Overflow. Capped at 1 billion to prevent crash at extreme values. */
+  /** Store overkill damage for Overflow.
+   *  Only 50% of overkill carries over to prevent exponential snowballing.
+   *  Hard-capped at 1 billion to prevent crashes at extreme values. */
   storeOverkill(overkill: number): void {
     if (this.hasUpgrade('overflow') && overkill > 0) {
-      this.state.overflowStored = Math.min(overkill, 1_000_000_000);
+      this.state.overflowStored = Math.min(Math.floor(overkill * 0.5), 1_000_000_000);
     }
   }
 

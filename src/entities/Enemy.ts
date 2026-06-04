@@ -27,6 +27,7 @@ export class Enemy {
   private readonly sprite: Phaser.GameObjects.Image;
   private readonly healthBar: HealthBar;
   private readonly baseX: number;
+  private readonly debuffText: Phaser.GameObjects.Text;
   private attackTimer: number;
 
   constructor(scene: Phaser.Scene, x: number, y: number, config?: EnemyConfig) {
@@ -45,7 +46,20 @@ export class Enemy {
     const barY     = this.isBoss ? y - 50 : y - 40;
     this.healthBar = new HealthBar(scene, x, barY, barWidth, 9);
 
-    // Boss name label is now displayed only in the HUD header — no sprite label.
+    // Debuff text sits just above the health bar
+    this.debuffText = scene.add.text(x, barY - 13, '', {
+      fontSize: '10px', fontFamily: 'monospace', color: '#ffffff',
+    }).setOrigin(0.5, 1).setDepth(5);
+  }
+
+  /** Call each frame to keep debuff icons in sync with live status. */
+  updateDebuffs(): void {
+    const parts: string[] = [];
+    const ps = this.statusEffects.poison;
+    const bs = this.statusEffects.burn;
+    if (ps && ps.stacks > 0)         parts.push(`☠${ps.stacks}`);
+    if (bs && bs.durationMs > 0)     parts.push('🔥');
+    this.debuffText.setText(parts.join(' '));
   }
 
   get x(): number { return this.sprite.x; }
@@ -140,6 +154,7 @@ export class Enemy {
   destroy(): void {
     this.sprite.destroy();
     this.healthBar.destroy();
+    this.debuffText.destroy();
   }
 
   // ---------------------------------------------------------------------------

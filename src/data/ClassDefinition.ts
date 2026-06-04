@@ -36,9 +36,9 @@ export const ALL_CLASSES: ClassDefinition[] = [
     name:        'Necromancer',
     icon:        '💀',
     color:       0x8e44ad,
-    description: 'Summon upgrades appear 3× more often. Each familiar adds +2 poison stacks per hit.',
+    description: 'Summon upgrades appear 3× more often. Each familiar adds +1 poison stack per hit.',
     flavour:     '"They were better workers after death."',
-    categoryWeights: { summons: 3, poison: 2 },
+    categoryWeights: { summons: 3, defense: 1 },
     apply: (_stats, engine) => {
       engine.registerTrigger('necromancer_class', {
         event: 'onHit',
@@ -47,7 +47,7 @@ export const ALL_CLASSES: ClassDefinition[] = [
           if (count > 0) {
             ctx.result.poisonApplied = Math.max(
               ctx.result.poisonApplied,
-              count * 2,
+              count * 1,
             );
           }
         },
@@ -62,15 +62,14 @@ export const ALL_CLASSES: ClassDefinition[] = [
     name:        'Assassin',
     icon:        '🗡',
     color:       0xe74c3c,
-    description: 'Critical upgrades appear 3× more often. Crits inflict 2 bonus poison stacks and deal +10% damage.',
+    description: 'Critical upgrades appear 3× more often. Crits deal +25% bonus damage. Poison upgrades appear 1.5× more often.',
     flavour:     '"One wound. Many consequences."',
-    categoryWeights: { critical: 3, poison: 2 },
+    categoryWeights: { critical: 3, damage: 2 },
     apply: (_stats, engine) => {
       engine.registerTrigger('assassin_class', {
         event: 'onCrit',
         action: (ctx) => {
-          ctx.result.poisonApplied += 2;
-          ctx.result.damage = Math.floor(ctx.result.damage * 1.10);
+          ctx.result.damage = Math.floor(ctx.result.damage * 1.25);
         },
       });
       engine.registerUpgrade('assassin_class');

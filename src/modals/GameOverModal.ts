@@ -37,6 +37,16 @@ export class GameOverModal {
   private open(run: RunResultDTO, newTitles: string[], goldEarned: number): void {
     this.active = true;
 
+    // R key = fast restart with same class/mode
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'r' || e.key === 'R') {
+        document.removeEventListener('keydown', onKey);
+        this.close();
+        startRun({ modeId: run.mode_id as ModeId, classId: run.class_id });
+      }
+    };
+    document.addEventListener('keydown', onKey);
+
     const dim = document.createElement('div');
     dim.className = 'modal-dim';
 
@@ -50,6 +60,7 @@ export class GameOverModal {
       this.buildRelics(run),
       this.buildEarned(goldEarned),
       ...newTitles.length > 0 ? [this.buildTitleUnlock(newTitles[0])] : [],
+      this.buildTip(run),
       this.buildButtons(run),
     );
 
@@ -180,13 +191,30 @@ export class GameOverModal {
     return banner;
   }
 
+  private buildTip(run: RunResultDTO): HTMLElement {
+    const tip = pickTip(run);
+    const wrap = document.createElement('div');
+    wrap.className = 'go-tip';
+
+    const label = document.createElement('span');
+    label.className   = 'go-tip-label';
+    label.textContent = 'TIP';
+
+    const text = document.createElement('span');
+    text.className   = 'go-tip-text';
+    text.textContent = tip;
+
+    wrap.append(label, text);
+    return wrap;
+  }
+
   private buildButtons(run: RunResultDTO): HTMLElement {
     const wrap = document.createElement('div');
     wrap.className = 'go-buttons';
 
     const playAgain = document.createElement('button');
     playAgain.className   = 'go-btn go-btn-primary';
-    playAgain.textContent = 'PLAY AGAIN';
+    playAgain.textContent = 'PLAY AGAIN  [R]';
     playAgain.addEventListener('click', () => {
       this.close();
       startRun({ modeId: run.mode_id as ModeId, classId: run.class_id });
@@ -232,4 +260,40 @@ function formatDuration(ms: number): string {
   const s = Math.floor(ms / 1000);
   const m = Math.floor(s / 60);
   return m > 0 ? `${m}m ${s % 60}s` : `${s}s`;
+}
+
+const TIPS_GENERAL = [
+  'Stack upgrades from the same category — synergy tier cards unlock at 2+ stacks.',
+  'Armor reduces all damage including mirror recoil and volatile explosions.',
+  'Merchant floors appear every 5 floors. Save gold for a big purchase.',
+  'Boss kills always grant an upgrade — prioritise boss floors when low on options.',
+  'Lifesteal + high attack speed is one of the strongest sustain combos.',
+  'Poison and Burn deal damage over time — stack them before the enemy attacks.',
+  'Overflow stores overkill damage for your next hit, but has a hard cap of 1B.',
+  'Critical hit chance caps at 95%. Stacking past that is wasted.',
+  'The Volatile modifier never kills you — it always leaves you at 5% HP.',
+  'Relics are permanent and powerful. Relic floors appear every 5 floors.',
+  'Press M during a run to pause and restart or quit safely.',
+  'Press B to see your full build, Tab to see live combat stats.',
+];
+
+const TIPS_LOW_FLOOR: string[] = [
+  'Died early? Focus on one damage category and stick with it.',
+  'Starter upgrades scale well when stacked. 3× Sharp Edge is a solid foundation.',
+  'Iron Skin stacks give +12 armor each. Even two stacks dramatically reduce damage taken.',
+];
+
+const TIPS_HIGH_FLOOR: string[] = [
+  'Past floor 10, synergy-tier cards start appearing regularly — keep space for them.',
+  'Keystones are game-changing. Check what you already own before the next relic floor.',
+  'At high floors, effective HP (shown in Stats panel) matters more than raw armor.',
+];
+
+function pickTip(run: RunResultDTO): string {
+  const pool = [
+    ...TIPS_GENERAL,
+    ...(run.floor_reached <= 5 ? TIPS_LOW_FLOOR : []),
+    ...(run.floor_reached >= 10 ? TIPS_HIGH_FLOOR : []),
+  ];
+  return pool[Math.floor(Math.random() * pool.length)];
 }

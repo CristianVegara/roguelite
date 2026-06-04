@@ -51,7 +51,7 @@ const DAMAGE: UpgradeDefinition[] = [
   },
   {
     id: 'overflow', name: 'Overflow',
-    description: 'Overkill damage is stored and added to your next attack.',
+    description: '50% of overkill damage is stored and added to your next attack.',
     category: 'damage', tier: 'transformation', rarity: 'rare',
     color: DAMAGE_COLOR, maxStacks: 1, tags: ['damage', 'overkill'],
     apply: (_s, e) => { reg(e, 'overflow'); },
@@ -201,7 +201,7 @@ const DEFENSE: UpgradeDefinition[] = [
   },
   {
     id: 'reactive_plating', name: 'Reactive Plating',
-    description: 'Each time you take damage, gain 1 armor (permanent for this run).',
+    description: 'Each time you take damage, gain 1 armor. Armor gained this way is permanent for the entire run.',
     category: 'defense', tier: 'starter', rarity: 'uncommon',
     color: DEF_COLOR, maxStacks: 1, tags: ['defense', 'armor', 'reactive'],
     apply: (_s, e) => { reg(e, 'reactive_plating'); },
@@ -813,10 +813,10 @@ interface RarityWeights { common: number; uncommon: number; rare: number; legend
 
 function rarityWeightsForFloor(floor: number): RarityWeights {
   if (floor <= 3)  return { common: 80, uncommon: 18, rare: 2,  legendary: 0  };
-  if (floor <= 6)  return { common: 60, uncommon: 28, rare: 10, legendary: 2  };
-  if (floor <= 10) return { common: 40, uncommon: 30, rare: 22, legendary: 8  };
-  if (floor <= 15) return { common: 20, uncommon: 30, rare: 32, legendary: 18 };
-  return              { common: 10, uncommon: 20, rare: 35, legendary: 35 };
+  if (floor <= 6)  return { common: 55, uncommon: 30, rare: 13, legendary: 2  };
+  if (floor <= 10) return { common: 35, uncommon: 32, rare: 24, legendary: 9  };
+  if (floor <= 15) return { common: 15, uncommon: 30, rare: 35, legendary: 20 };
+  return              { common: 8,  uncommon: 17, rare: 38, legendary: 37 };
 }
 
 function weightedRarityRoll(weights: RarityWeights): UpgradeRarity {
@@ -923,6 +923,21 @@ export function pickRunUpgrades(
     const pick = source[Math.floor(Math.random() * source.length)];
     chosen.push(pick);
     usedIds.add(pick.id);
+  }
+
+  // Floor 10+: if no card is synergy/transformation/keystone tier, replace the
+  // last common card with one from the higher tiers to help build-smoothing.
+  if (floor >= 10) {
+    const hasAdvanced = chosen.some(u => u.tier !== 'starter');
+    if (!hasAdvanced) {
+      const advPool = regular.filter(
+        u => u.tier !== 'starter' && isAvailable(u) && !usedIds.has(u.id),
+      );
+      if (advPool.length > 0 && chosen.length > 0) {
+        const replacement = advPool[Math.floor(Math.random() * advPool.length)];
+        chosen[chosen.length - 1] = replacement;
+      }
+    }
   }
 
   // Shuffle so keystone isn't always in slot 0

@@ -179,17 +179,21 @@ export class StatsPanel {
     const reflect    = Math.round((s.reflectPercent ?? 0) * 100);
 
     const shield = s.shield ?? 0;
+    const dmgMult  = Math.round(((s.damageMultiplier ?? 1.0) - 1.0) * 100);
+    const psnChance = Math.round((s.poisonChance ?? 0) * 100);
+    const burnChance = Math.round((s.burnChance ?? 0) * 100);
+
     const compact: [string, string][] = [
       ['ATK SPD',  `${s.attackSpeed.toFixed(2)}/s`],
-      ['DAMAGE',   `${s.damage}`],
+      ['DAMAGE',   `${s.damage}${dmgMult !== 0 ? `  (${dmgMult > 0 ? '+' : ''}${dmgMult}%)` : ''}`],
       ['DPS',      `~${dps}`],
       ['CRIT',     `${critPct}%  ×${critMult}`],
       ['ARMOR',    `${Math.floor(e.effectiveArmor())}`],
       ['EFF HP',   `${effectiveHP}`],
       ['LIFESTEAL',ls > 0 ? `${ls}%` : '—'],
       ['REFLECT',  reflect > 0 ? `${reflect}%` : '—'],
-      ['PSN DPS',  poisonDPS > 0 ? `~${poisonDPS}` : '—'],
-      ['BURN DPS', burnDPS   > 0 ? `~${burnDPS}` : '—'],
+      ['PSN DPS',  poisonDPS > 0 ? `~${poisonDPS}  (${psnChance}% chance)` : '—'],
+      ['BURN DPS', burnDPS   > 0 ? `~${burnDPS}  (${burnChance}% chance)` : '—'],
       ['SHIELD',   shield > 0 ? `${shield}` : '—'],
       ['GOLD',     `${e.gold}`],
     ];

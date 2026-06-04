@@ -919,6 +919,8 @@ export class GameScene extends Phaser.Scene {
   private refreshHpTexts(): void {
     // Bridge: push live HP + enemy status so HTML HUD stays in sync
     this.syncRunState();
+    // Update Phaser-side debuff icons above the enemy sprite
+    this.enemy?.updateDebuffs();
   }
 
   private updateModifierLabel(): void {
