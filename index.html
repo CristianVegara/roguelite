@@ -30,6 +30,12 @@
     -->
     <div id="app">
 
+      <!-- Background image layer — sits beneath the canvas and every overlay.
+           The actual background-image URL is injected at runtime by main.ts
+           using import.meta.env.BASE_URL so the path is always correct
+           regardless of which subpath the site is deployed to. -->
+      <div id="canvas-bg"></div>
+
       <!-- Phaser canvas mount.
            Starts visible so Phaser scenes work during migration.
            Router adds is-hidden only once a real HTML screen is registered

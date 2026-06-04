@@ -14,6 +14,15 @@ import { createLeaderboardScreen } from './screens/LeaderboardScreen';
 import { createNameEntryScreen }   from './screens/NameEntryScreen';
 import { setPhaserGame }           from './bridge/startRun';
 
+// ── Background image layer ───────────────────────────────────────────────────
+// Set via JS so the path is resolved relative to Vite's configured base,
+// which is correct for both local dev and subpath-hosted deployments.
+const canvasBg = document.getElementById('canvas-bg');
+if (canvasBg) {
+  canvasBg.style.backgroundImage =
+    `url('${import.meta.env.BASE_URL}images/background/background.png')`;
+}
+
 // ── HTML layer: initialise router ────────────────────────────────────────────
 router.init();
 

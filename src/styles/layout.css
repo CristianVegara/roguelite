@@ -20,6 +20,18 @@
   background-color: var(--bg-base);
 }
 
+/* ── Background image layer — behind everything, including the canvas ──────── */
+
+#canvas-bg {
+  position:            absolute;
+  inset:               0;
+  z-index:             0;          /* below --z-base (1), never intercepts events */
+  background-size:     cover;
+  background-position: center;
+  background-repeat:   no-repeat;
+  pointer-events:      none;
+}
+
 /* ── Phaser canvas mount ─────────────────────────────────────────────────── */
 
 #canvas-mount {
@@ -30,7 +42,9 @@
   display:          flex;
   align-items:      center;
   justify-content:  center;
-  background-color: var(--bg-void);
+  /* Transparent so #canvas-bg shows through the letterbox areas
+     around the canvas when the viewport aspect ratio doesn't match 480×640. */
+  background-color: transparent;
 }
 
 /* Hidden when the router is on any hub screen */
