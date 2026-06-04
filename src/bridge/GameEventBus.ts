@@ -77,6 +77,9 @@ export interface BusEvents {
   // ── HUD controls (HTML → Phaser) ─────────────────────────────────────────
   /** HTML speed buttons emit this; GameScene listens and calls setGameSpeed(). */
   'speed:change': { speed: 1 | 1.5 | 2 };
+  /** HTML Build / Stats buttons emit these; Phaser panels toggle on receipt. */
+  'hud:toggle-build': Record<string, never>;
+  'hud:toggle-stats': Record<string, never>;
 
   // ── Pause menu ───────────────────────────────────────────────────────────
   'pause:open':   Record<string, never>;  // Phaser → HTML (M key pressed)

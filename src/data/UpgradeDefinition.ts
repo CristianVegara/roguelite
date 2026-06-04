@@ -30,6 +30,11 @@ export interface UpgradeDefinition {
   color:        number;
   /** Maximum times this upgrade can be taken in a single run (1 for keystones). */
   maxStacks:    number;
+  /**
+   * Short note shown on the card when maxStacks > 1, explaining what each
+   * additional stack adds. E.g. "+20% damage per stack".
+   */
+  stackNote?:   string;
   /** IDs of other upgrades the player must own before this appears. */
   requires?:    string[];
   /** Semantic tags used by the Phase 4 draft biasing system. */

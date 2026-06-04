@@ -168,6 +168,8 @@ export const ALL_CLASSES: ClassDefinition[] = [
       // Boost lightning damage to 100% minimum
       stats.lightningDamage = Math.max(stats.lightningDamage ?? 0.5, 1.0);
       engine.registerUpgrade('archmage_class');
+      // Archmage starts with Ball Lightning built-in (fires every 2 attacks via archmage_class flag)
+      engine.registerUpgrade('ball_lightning');
     },
   },
 

@@ -9,6 +9,7 @@
 import { runState } from '../bridge/RunStateStore';
 import { bus }      from '../bridge/GameEventBus';
 
+
 export class HudLeft {
   private floorLabel!: HTMLElement;
   private classBadge!: HTMLElement;
@@ -112,7 +113,18 @@ export class HudLeft {
     goldLabel.textContent = 'GOLD';
 
     const kbHints = el('div', 'hud-kb-hints');
-    kbHints.textContent = '[B] Build  [Tab] Stats';
+
+    const buildBtn = el('button', 'hud-action-btn');
+    buildBtn.textContent = 'BUILD';
+    buildBtn.title = 'Toggle build overview (B)';
+    buildBtn.addEventListener('click', () => bus.emit({ type: 'hud:toggle-build', payload: {} }));
+
+    const statsBtn = el('button', 'hud-action-btn');
+    statsBtn.textContent = 'STATS';
+    statsBtn.title = 'Toggle stats panel (Tab)';
+    statsBtn.addEventListener('click', () => bus.emit({ type: 'hud:toggle-stats', payload: {} }));
+
+    kbHints.append(buildBtn, statsBtn);
 
     this.relicText = el('div', 'hud-relic-text');
     this.relicText.textContent = 'RELICS: none';

@@ -8,11 +8,12 @@
 import { runState } from '../bridge/RunStateStore';
 
 export class HudRight {
-  private nameEl!:    HTMLElement;
-  private hpValue!:   HTMLElement;
-  private hpFill!:    HTMLElement;
-  private poisonPip!: HTMLElement;
-  private burnPip!:   HTMLElement;
+  private nameEl!:     HTMLElement;
+  private hpValue!:    HTMLElement;
+  private hpFill!:     HTMLElement;
+  private poisonPip!:  HTMLElement;
+  private burnPip!:    HTMLElement;
+  private summonPip!:  HTMLElement;
 
   private subs: Array<() => void> = [];
 
@@ -49,9 +50,11 @@ export class HudRight {
 
     // Status pips
     const pips = el('div', 'hud-status-pips');
-    this.poisonPip = el('span', 'hud-pip--poison');
-    this.burnPip   = el('span', 'hud-pip--burn');
-    pips.append(this.poisonPip, this.burnPip);
+    this.poisonPip  = el('span', 'hud-pip--poison');
+    this.burnPip    = el('span', 'hud-pip--burn');
+    this.summonPip  = el('span', 'hud-pip--summon');
+    this.summonPip.style.display = 'none';
+    pips.append(this.poisonPip, this.burnPip, this.summonPip);
 
     panel.append(accent, this.nameEl, this.hpValue, track, pips);
     return panel;
@@ -85,6 +88,17 @@ export class HudRight {
       runState.subscribe(s => s.enemyBurnStacks, (stacks) => {
         this.burnPip.textContent = stacks > 0 ? '🔥 BURN' : '';
         this.burnPip.style.display = stacks > 0 ? 'inline' : 'none';
+      }),
+    );
+
+    this.subs.push(
+      runState.subscribe(s => s.summonCount, (count) => {
+        if (count > 0) {
+          this.summonPip.textContent = `👁 ×${count}`;
+          this.summonPip.style.display = 'inline';
+        } else {
+          this.summonPip.style.display = 'none';
+        }
       }),
     );
   }

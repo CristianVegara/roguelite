@@ -50,6 +50,9 @@ export interface RunState {
   // ── Economy ──────────────────────────────────────────────────────────────
   gold:           number;
 
+  // ── Summons ──────────────────────────────────────────────────────────────
+  summonCount:    number;
+
   // ── Build ────────────────────────────────────────────────────────────────
   keystoneName:   string;   // '' if no keystone held
   keystoneId:     string;
@@ -92,6 +95,7 @@ const DEFAULT_STATE: RunState = {
   enemyBurnStacks:   0,
 
   gold:              0,
+  summonCount:       0,
 
   keystoneName:      '',
   keystoneId:        '',

@@ -20,14 +20,16 @@ const DAMAGE: UpgradeDefinition[] = [
     id: 'sharp_edge', name: 'Sharp Edge',
     description: 'Deal 20% more damage per hit.',
     category: 'damage', tier: 'starter', rarity: 'common',
-    color: DAMAGE_COLOR, maxStacks: 5, tags: ['damage', 'basic'],
+    color: DAMAGE_COLOR, maxStacks: 5, stackNote: '+20% damage per stack',
+    tags: ['damage', 'basic'],
     apply: (s) => { s.damage = Math.ceil(s.damage * 1.20); },
   },
   {
     id: 'heavy_strikes', name: 'Heavy Strikes',
     description: '+30% damage. −10% attack speed.',
     category: 'damage', tier: 'starter', rarity: 'common',
-    color: DAMAGE_COLOR, maxStacks: 3, tags: ['damage', 'tradeoff'],
+    color: DAMAGE_COLOR, maxStacks: 3, stackNote: '+30% dmg / −10% atk spd per stack',
+    tags: ['damage', 'tradeoff'],
     apply: (s) => {
       s.damage       = Math.ceil(s.damage * 1.30);
       s.attackSpeed  = parseFloat((s.attackSpeed * 0.90).toFixed(3));
@@ -78,14 +80,16 @@ const CRITICAL: UpgradeDefinition[] = [
     id: 'eagle_eye', name: 'Eagle Eye',
     description: '+10% critical hit chance.',
     category: 'critical', tier: 'starter', rarity: 'common',
-    color: CRIT_COLOR, maxStacks: 5, tags: ['crit', 'basic'],
+    color: CRIT_COLOR, maxStacks: 5, stackNote: '+10% crit chance per stack',
+    tags: ['crit', 'basic'],
     apply: (s) => { s.critChance = Math.min(0.95, s.critChance + 0.10); },
   },
   {
     id: 'precision', name: 'Precision',
     description: '+60% critical damage multiplier.',
     category: 'critical', tier: 'starter', rarity: 'common',
-    color: CRIT_COLOR, maxStacks: 4, tags: ['crit', 'basic'],
+    color: CRIT_COLOR, maxStacks: 4, stackNote: '+0.6× crit multiplier per stack',
+    tags: ['crit', 'basic'],
     apply: (s) => { s.critMultiplier += 0.60; },
   },
   {
@@ -129,7 +133,8 @@ const LIFESTEAL: UpgradeDefinition[] = [
     id: 'leech', name: 'Leech',
     description: '+5% lifesteal. Heal for a fraction of every hit.',
     category: 'lifesteal', tier: 'starter', rarity: 'common',
-    color: LS_COLOR, maxStacks: 6, tags: ['lifesteal', 'sustain'],
+    color: LS_COLOR, maxStacks: 6, stackNote: '+5% lifesteal per stack',
+    tags: ['lifesteal', 'sustain'],
     apply: (s) => { s.lifesteal = (s.lifesteal ?? 0) + 0.05; },
   },
   {
@@ -190,7 +195,8 @@ const DEFENSE: UpgradeDefinition[] = [
     id: 'iron_skin', name: 'Iron Skin',
     description: '+12 armor. Reduces all incoming damage.',
     category: 'defense', tier: 'starter', rarity: 'common',
-    color: DEF_COLOR, maxStacks: 6, tags: ['defense', 'armor'],
+    color: DEF_COLOR, maxStacks: 6, stackNote: '+12 armor per stack',
+    tags: ['defense', 'armor'],
     apply: (s) => { s.armor += 12; },
   },
   {
@@ -228,7 +234,8 @@ const REFLECT: UpgradeDefinition[] = [
     id: 'mirror_shards', name: 'Mirror Shards',
     description: 'Reflect 15% of incoming damage back to the attacker.',
     category: 'reflect', tier: 'starter', rarity: 'common',
-    color: REF_COLOR, maxStacks: 4, tags: ['reflect', 'basic'],
+    color: REF_COLOR, maxStacks: 4, stackNote: '+15% reflect per stack',
+    tags: ['reflect', 'basic'],
     apply: (s) => { s.reflectPercent = (s.reflectPercent ?? 0) + 0.15; },
   },
   {
@@ -273,7 +280,8 @@ const POISON: UpgradeDefinition[] = [
     id: 'venom_tips', name: 'Venom Tips',
     description: '15% chance per attack to apply 1 poison stack (2 dmg/tick, 2 ticks/sec).',
     category: 'poison', tier: 'starter', rarity: 'common',
-    color: PSN_COLOR, maxStacks: 3, tags: ['poison', 'dot'],
+    color: PSN_COLOR, maxStacks: 3, stackNote: '+15% poison chance, +5 max stacks per stack',
+    tags: ['poison', 'dot'],
     apply: (s) => {
       s.poisonChance  = (s.poisonChance  ?? 0) + 0.15;
       s.poisonMaxStacks = (s.poisonMaxStacks ?? 10) + 5;
@@ -283,7 +291,8 @@ const POISON: UpgradeDefinition[] = [
     id: 'toxic_coating', name: 'Toxic Coating',
     description: 'Poison procs apply 1 additional stack.',
     category: 'poison', tier: 'starter', rarity: 'common',
-    color: PSN_COLOR, maxStacks: 3, tags: ['poison', 'stacks'],
+    color: PSN_COLOR, maxStacks: 3, stackNote: '+1 poison stack per proc, per stack',
+    tags: ['poison', 'stacks'],
     apply: (s) => { s.poisonStacks = (s.poisonStacks ?? 1) + 1; },
   },
   {
@@ -325,7 +334,8 @@ const BURN: UpgradeDefinition[] = [
     id: 'kindling', name: 'Kindling',
     description: '15% chance per attack to ignite the enemy (5 dmg/tick for 3s).',
     category: 'burn', tier: 'starter', rarity: 'common',
-    color: BURN_COLOR, maxStacks: 3, tags: ['burn', 'dot'],
+    color: BURN_COLOR, maxStacks: 3, stackNote: '+15% burn chance per stack',
+    tags: ['burn', 'dot'],
     apply: (s) => { s.burnChance = (s.burnChance ?? 0) + 0.15; },
   },
   {
@@ -390,7 +400,8 @@ const LIGHTNING: UpgradeDefinition[] = [
     id: 'static_charge', name: 'Static Charge',
     description: '15% chance per attack to chain lightning for 50% of hit damage.',
     category: 'lightning', tier: 'starter', rarity: 'common',
-    color: LTN_COLOR, maxStacks: 3, tags: ['lightning', 'chain'],
+    color: LTN_COLOR, maxStacks: 3, stackNote: '+15% lightning chance per stack',
+    tags: ['lightning', 'chain'],
     apply: (s) => {
       s.lightningChance = (s.lightningChance ?? 0) + 0.15;
       s.lightningDamage = s.lightningDamage ?? 0.5;
@@ -502,7 +513,8 @@ const RAGE: UpgradeDefinition[] = [
     id: 'fury', name: 'Fury',
     description: '+8% damage when below 75% HP. Each stack of Fury adds another 8%.',
     category: 'rage', tier: 'starter', rarity: 'common',
-    color: RAGE_COLOR, maxStacks: 4, tags: ['rage', 'hp', 'conditional'],
+    color: RAGE_COLOR, maxStacks: 4, stackNote: '+8% low-HP damage bonus per stack',
+    tags: ['rage', 'hp', 'conditional'],
     apply: (_s, e) => { reg(e, 'fury'); },
   },
   {
@@ -552,7 +564,8 @@ const BERSERKER: UpgradeDefinition[] = [
     id: 'quick_draw', name: 'Quick Draw',
     description: '+15% attack speed.',
     category: 'berserker', tier: 'starter', rarity: 'common',
-    color: BRSRK_COLOR, maxStacks: 5, tags: ['speed', 'basic'],
+    color: BRSRK_COLOR, maxStacks: 5, stackNote: '+15% attack speed per stack',
+    tags: ['speed', 'basic'],
     apply: (s) => { s.attackSpeed = parseFloat((s.attackSpeed * 1.15).toFixed(3)); },
   },
   {
@@ -598,7 +611,8 @@ const ECONOMY: UpgradeDefinition[] = [
     id: 'treasure_hunter', name: 'Treasure Hunter',
     description: '+8 gold on each floor clear.',
     category: 'economy', tier: 'starter', rarity: 'common',
-    color: ECO_COLOR, maxStacks: 4, tags: ['gold', 'economy'],
+    color: ECO_COLOR, maxStacks: 4, stackNote: '+8 gold per floor clear per stack',
+    tags: ['gold', 'economy'],
     apply: (s) => { s.goldPerFloor = (s.goldPerFloor ?? 0) + 8; },
   },
   {
@@ -636,7 +650,8 @@ const COOLDOWN: UpgradeDefinition[] = [
     id: 'echo', name: 'Echo',
     description: '20% chance that any special effect (lightning, burn proc, poison proc) triggers twice.',
     category: 'cooldown', tier: 'starter', rarity: 'uncommon',
-    color: CD_COLOR, maxStacks: 3, tags: ['ability', 'double'],
+    color: CD_COLOR, maxStacks: 3, stackNote: '+20% echo proc chance per stack',
+    tags: ['ability', 'double'],
     apply: (_s, e) => {
       // Echo is checked inside RulesEngine for each proc — register once
       reg(e, 'echo');
@@ -709,7 +724,8 @@ const AREA_DAMAGE: UpgradeDefinition[] = [
     id: 'cleave', name: 'Cleave',
     description: 'Every attack deals +30% of its damage as bonus area damage.',
     category: 'areaDamage', tier: 'starter', rarity: 'common',
-    color: AREA_COLOR, maxStacks: 3, tags: ['area', 'basic'],
+    color: AREA_COLOR, maxStacks: 3, stackNote: '+30% area damage per stack',
+    tags: ['area', 'basic'],
     apply: (s) => { s.areaPercent = (s.areaPercent ?? 0) + 0.30; },
   },
   {
@@ -831,6 +847,7 @@ export function pickRunUpgrades(
   floor:   number,
   owned:   OwnedUpgrades,
   classWeights?: Partial<Record<string, number>>,
+  guaranteeCategory?: string,   // if set, slot 0 is always from this category
 ): UpgradeDefinition[] {
   const weights = rarityWeightsForFloor(floor);
 
@@ -863,6 +880,18 @@ export function pickRunUpgrades(
 
   const chosen: UpgradeDefinition[] = [];
   const usedIds = new Set<string>();
+
+  // Guaranteed category pick (first level-up class guarantee)
+  if (guaranteeCategory) {
+    const catPool = regular.filter(
+      u => u.category === guaranteeCategory && isAvailable(u),
+    );
+    if (catPool.length > 0) {
+      const pick = catPool[Math.floor(Math.random() * catPool.length)];
+      chosen.push(pick);
+      usedIds.add(pick.id);
+    }
+  }
 
   // Decide if a keystone slot replaces one slot
   let keystoneSlot = -1;

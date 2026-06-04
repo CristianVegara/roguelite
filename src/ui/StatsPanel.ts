@@ -128,11 +128,14 @@ export class StatsPanel {
     }
   }
 
+  /** Called by HUD button or keydown-TAB. */
+  toggle(): void {
+    this.visible = !this.visible;
+    this.container.setVisible(this.visible);
+  }
+
   private bindKey(): void {
-    this.scene.input.keyboard?.on('keydown-TAB', () => {
-      this.visible = !this.visible;
-      this.container.setVisible(this.visible);
-    });
+    this.scene.input.keyboard?.on('keydown-TAB', () => this.toggle());
     this.scene.input.keyboard?.on('keydown-E', () => {
       if (!this.visible) return;
       this.expanded = !this.expanded;

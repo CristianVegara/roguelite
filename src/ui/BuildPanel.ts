@@ -49,15 +49,18 @@ export class BuildPanel {
     this.container.setDepth(110);
   }
 
+  /** Called by HUD button or keydown-B. */
+  toggle(): void {
+    this.visible = !this.visible;
+    if (this.visible) {
+      this.scrollOffset = 0;
+      this.rebuild();
+    }
+    this.container.setVisible(this.visible);
+  }
+
   private bindKeys(): void {
-    this.scene.input.keyboard?.on('keydown-B', () => {
-      this.visible = !this.visible;
-      if (this.visible) {
-        this.scrollOffset = 0;
-        this.rebuild();
-      }
-      this.container.setVisible(this.visible);
-    });
+    this.scene.input.keyboard?.on('keydown-B', () => this.toggle());
 
     // Scroll with mouse wheel when visible
     this.scene.input.on('wheel',

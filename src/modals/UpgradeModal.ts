@@ -134,11 +134,13 @@ export class UpgradeModal {
     flavEl.textContent = upg.flavour ? `"${upg.flavour}"` : '';
     flavEl.hidden      = !upg.flavour;
 
-    // Stack count
+    // Stack note — only for upgrades you can take multiple times
     const stackEl = document.createElement('div');
     stackEl.className = 'um-card-stack';
     stackEl.hidden    = upg.maxStacks <= 1;
-    stackEl.textContent = `Stack: ${upg.maxStacks}`;
+    stackEl.textContent = upg.stackNote
+      ? `↑ ${upg.stackNote}  (max ${upg.maxStacks}×)`
+      : `Stackable  ×${upg.maxStacks}`;
 
     card.append(badges, catEl, nameEl, div, descEl, flavEl, stackEl);
 

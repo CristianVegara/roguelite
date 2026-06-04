@@ -121,6 +121,10 @@ export class GameScene extends Phaser.Scene {
       this.setGameSpeed(e.payload.speed);
     });
 
+    // ── Bridge: HTML Build / Stats buttons toggle Phaser panels ──────────────
+    bus.on('hud:toggle-build', () => this.buildPanel.toggle());
+    bus.on('hud:toggle-stats', () => this.statsPanel.toggle());
+
     // ── M key → open pause menu ───────────────────────────────────────────────
     this.input.keyboard?.on('keydown-M', () => {
       if (this.state === 'fighting') {
@@ -449,12 +453,14 @@ export class GameScene extends Phaser.Scene {
     this.pendingBossUpgrade    = false;
     this.pendingLevelUpUpgrade = false;
 
-    this.time.delayedCall(250, () => {
+    // 500 ms pause so kill floaters settle before the overlay appears,
+    // then 900 ms on the overlay before the upgrade / relic / next-floor prompt.
+    this.time.delayedCall(500, () => {
       this.showFloorClearOverlay(floor);
-      this.time.delayedCall(800, () => {
-        if (doUpgrade)       this.launchUpgradeScreen();
+      this.time.delayedCall(900, () => {
+        if (doUpgrade)         this.launchUpgradeScreen();
         else if (isRelicFloor) this.launchRelicScreen();
-        else                 this.advanceFloor();
+        else                   this.advanceFloor();
       });
     });
   }
@@ -469,7 +475,14 @@ export class GameScene extends Phaser.Scene {
         ? `★  Level ${level} — Choose an Upgrade`
         : `Floor ${this.floorManager.currentFloor} cleared`;
 
-    const upgradePicks = pickRunUpgrades(3, this.floorManager.currentFloor, this.owned, classWeights);
+    // On the first level-up guarantee at least one card from the class's primary category
+    const primaryCategory: string | undefined = classWeights
+      ? (Object.entries(classWeights).sort((a, b) => (b[1] ?? 0) - (a[1] ?? 0))[0]?.[0])
+      : undefined;
+    const isFirstLevelUp = !isBossReward && level === 1;
+    const guaranteeCategory = isFirstLevelUp ? primaryCategory : undefined;
+
+    const upgradePicks = pickRunUpgrades(3, this.floorManager.currentFloor, this.owned, classWeights, guaranteeCategory);
 
     bus.emit({ type: 'upgrade:available', payload: {
       upgrades:     upgradePicks,
@@ -1020,7 +1033,8 @@ export class GameScene extends Phaser.Scene {
       enemyPoisonStacks: ps?.stacks ?? 0,
       enemyBurnStacks:   (bs && bs.durationMs > 0) ? 1 : 0,
 
-      gold:       this.engine.gold,
+      gold:        this.engine.gold,
+      summonCount: this.player.stats.summonCount ?? 0,
 
       keystoneName: this.detectKeystone() ?? '',
       keystoneId:   this.detectKeystoneId(),
