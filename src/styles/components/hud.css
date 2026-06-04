@@ -226,20 +226,6 @@
 .hud-pip--poison { color: var(--color-arcane); }
 .hud-pip--burn   { color: var(--accent-fire); }
 
-/* ── Tab strip (Build / Stats) ───────────────────────────────────────────── */
-/* Sits at 126px — 2px below the HP panels (top:66 + height:58 = 124px).
-   Anchors the Build/Stats actions cohesively to the player HUD zone,
-   above the combat arena and separate from the footer bar. */
-
-.hud-tab-strip {
-  position:       absolute;
-  top:            126px;
-  right:          6px;
-  display:        flex;
-  gap:            4px;
-  pointer-events: auto;
-}
-
 /* ── Bottom bar ──────────────────────────────────────────────────────────── */
 
 .hud-botbar {
@@ -269,7 +255,12 @@
   color:       var(--text-dim);
 }
 
-/* .hud-kb-hints removed — Build/Stats buttons moved to .hud-tab-strip */
+.hud-kb-hints {
+  position:    absolute;
+  top:         6px; right: 6px;
+  display:     flex;
+  gap:         4px;
+}
 
 .hud-action-btn {
   background:     rgba(255,255,255,0.06);

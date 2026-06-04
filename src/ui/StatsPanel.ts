@@ -28,7 +28,9 @@ export class StatsPanel {
 
   private readonly PANEL_W   = 148;
   private readonly DEFAULT_X = GAME_WIDTH - 148 - 4;   // 328
-  private readonly DEFAULT_Y = 50;
+  // 130 = 2px gap below the HP panels (top:66 + height:58 = 124px).
+  // Previously 50, which overlapped the top bar zone.
+  private readonly DEFAULT_Y = 130;
   private readonly LINE_H    = 14;
 
   // Drag state

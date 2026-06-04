@@ -23,8 +23,10 @@ export class BuildPanel {
 
   private readonly PANEL_W  = 200;
   private readonly PANEL_X  = GAME_WIDTH - 200 - 4;   // 276
-  private readonly PANEL_Y  = 50;
-  private readonly MAX_H    = GAME_HEIGHT - 80;
+  // 130 = 2px gap below the HP panels (top:66 + height:58 = 124px).
+  // Previously 50, which overlapped the top bar zone.
+  private readonly PANEL_Y  = 130;
+  private readonly MAX_H    = GAME_HEIGHT - 160;       // adjusted to match new top
   private readonly LINE_H   = 15;
 
   // Scrolling
