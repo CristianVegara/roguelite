@@ -175,7 +175,7 @@ export const ALL_CLASSES: ClassDefinition[] = [
   // ── 8. Bounty_Hunter ─────────────────────────────────────────────────────────────
   {
     id:          'Bounty_Hunter',
-    name:        'Bounty_Hunter',
+    name:        'Bounty Hunter',
     icon:        '📜',
     color:       0xf39c12,
     description: 'Economy upgrades appear 3× more often. Start with 30 gold. Every 20 gold permanently boosts damage by 3%.',
