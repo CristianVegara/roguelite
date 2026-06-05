@@ -756,4 +756,63 @@
     padding:    var(--space-2) var(--space-4);
     font-size:  var(--text-label);
   }
+
+  /* ── Relic modal ─────────────────────────────────────────────────────────── */
+
+  .rm-card-row {
+    grid-template-columns: 1fr;
+    gap:                   var(--space-3);
+  }
+
+  .rm-card { min-height: unset; }
+
+  /* ── Merchant modal ──────────────────────────────────────────────────────── */
+
+  /* Upgrade offer cards: single column */
+  .mm-offer-grid {
+    grid-template-columns: 1fr;
+    gap:                   var(--space-2);
+  }
+
+  /* Consumable row: stack vertically */
+  .mm-consumable-row {
+    grid-template-columns: 1fr;
+    gap:                   var(--space-2);
+  }
+
+  /* Consumables need a taller tap target */
+  .mm-consumable { min-height: 48px; }
+
+  /* Buy and reroll buttons: full-width, taller */
+  .mm-buy-btn,
+  .mm-reroll-btn {
+    width:      100%;
+    min-height: 44px;
+    font-size:  var(--text-label);
+  }
+
+  /* ── Game-over modal ─────────────────────────────────────────────────────── */
+
+  .go-stat-grid {
+    /* 2×N rather than 3×N — each cell stays readable */
+    grid-template-columns: 1fr 1fr;
+  }
+
+  /* Action buttons: full-width, taller */
+  .go-btn {
+    width:      100%;
+    min-height: 48px;
+    font-size:  var(--text-body);
+  }
+
+  /* ── Pause modal ─────────────────────────────────────────────────────────── */
+
+  .pause-panel {
+    width:   100%;
+    padding: var(--space-5) var(--space-4);  /* 24px 16px — fits narrow screens */
+    gap:     var(--space-4);
+  }
+
+  /* Pause buttons: already full-width, just ensure tap height */
+  .pause-btn { min-height: 48px; font-size: var(--text-body); }
 }

@@ -158,18 +158,27 @@ export class GameScene extends Phaser.Scene {
     bus.on('hud:toggle-build', () => this.buildPanel.toggle());
     bus.on('hud:toggle-stats', () => this.statsPanel.toggle());
 
-    // ── M key → open pause menu ───────────────────────────────────────────────
+    // ── M key → request pause (emit only; scene.pause is handled by bus listener)
     this.input.keyboard?.on('keydown-M', () => {
       if (this.state === 'fighting') {
-        this.scene.pause();
         bus.emit({ type: 'pause:open', payload: {} });
       }
     });
 
     // ── Pause menu bus responses ──────────────────────────────────────────────
-    this.busOffPause = bus.on('pause:resume', () => {
-      this.scene.resume();
-    });
+    // pause:open — triggered by M key OR the mobile chrome pause button.
+    // Centralising scene.pause() here means both input paths are identical.
+    // Both off-functions are combined into busOffPause so a single call in
+    // pause:quit / DESTROY cleans up both listeners.
+    {
+      const offOpen   = bus.on('pause:open', () => {
+        if (this.state === 'fighting') this.scene.pause();
+      });
+      const offResume = bus.on('pause:resume', () => {
+        this.scene.resume();
+      });
+      this.busOffPause = () => { offOpen(); offResume(); };
+    }
 
     this.busOffRestart = bus.on('pause:restart', () => {
       const cfg = getRunConfig();
