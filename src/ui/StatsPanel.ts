@@ -148,7 +148,7 @@ export class StatsPanel {
     this.visible = !this.visible;
     if (this.visible && !wasVisible && this.followPlayer) {
       this.updatePosition();
-      this.followPlayer = false;
+      this.followPlayer = true;
     }
     this.container.setVisible(this.visible);
   }
