@@ -25,6 +25,7 @@ const MIN_DEAD_ZONE = 40;
 export class MobileChrome {
   private topBar:    HTMLElement;
   private bottomBar: HTMLElement;
+  private hudRoot:    HTMLElement | null = null;
 
   // ── Top bar elements ──────────────────────────────────────────────────────
   private tbFloor!:          HTMLElement;
@@ -48,6 +49,7 @@ export class MobileChrome {
   constructor() {
     this.topBar    = document.getElementById('mobile-top-bar')!;
     this.bottomBar = document.getElementById('mobile-bottom-bar')!;
+    this.hudRoot   = document.getElementById('hud-root');
     this.buildTopBar();
     this.buildBottomBar();
     this.attachCanvasObserver();
@@ -189,6 +191,7 @@ export class MobileChrome {
   private setActive(active: boolean): void {
     this.topBar.classList.toggle('is-active',    active);
     this.bottomBar.classList.toggle('is-active', active);
+    this.hudRoot?.classList.toggle('mobile-chrome-active', active);
   }
 
   // ── RunStateStore subscriptions ───────────────────────────────────────────

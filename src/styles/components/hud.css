@@ -445,6 +445,13 @@
   display: flex;
 }
 
+#hud-root.mobile-chrome-active .hud-topbar,
+#hud-root.mobile-chrome-active .hud-hp-panel,
+#hud-root.mobile-chrome-active .hud-botbar,
+#hud-root.mobile-chrome-active .hud-mod-strip {
+  display: none;
+}
+
 /* ── Top bar rows ─────────────────────────────────────────────────────────── */
 
 .mob-info-row {
