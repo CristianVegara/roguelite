@@ -104,6 +104,7 @@ export class GameScene extends Phaser.Scene {
       enemyDamageMultiplier: cfg0.rules.enemyDamageMultiplier,
       enemySpeedMultiplier:  cfg0.rules.enemySpeedMultiplier,
       monsterSheet:          this.monsterSheet,
+      getRandomBossCellKey:  SpriteLoader.getRandomBossSheetCellKey,
     });
     this.owned               = new Map();
     this.ownedRelics         = new Set();

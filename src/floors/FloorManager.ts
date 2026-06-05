@@ -36,7 +36,9 @@ export interface FloorManagerOptions {
   /** Nightmare: multiply enemy attack speed by this factor. */
   enemySpeedMultiplier?:   number;
   /** Determines which monster sprite sheet to use for regular enemies. */
-  monsterSheet?:           'monster_sheet_1' | 'monster_sheet_2';
+  monsterSheet?:           'monster_sheet_1' | 'monster_sheet_2' | 'monster_sheet_3';
+  /** Optional callback to choose a random boss cell texture key for the first boss floor. */
+  getRandomBossCellKey?:  () => string;
 }
 
 /**
@@ -69,7 +71,8 @@ export class FloorManager {
   private readonly _enemyDamageMultiplier:   number;
   private readonly _enemySpeedMultiplier:    number;
 
-  private readonly _monsterSheet: 'monster_sheet_1' | 'monster_sheet_2';
+  private readonly _monsterSheet: 'monster_sheet_1' | 'monster_sheet_2' | 'monster_sheet_3';
+  private readonly _getRandomBossCellKey: (() => string) | null;
 
   constructor(options: FloorManagerOptions = {}) {
     this._bossesOnly            = options.bossesOnly            ?? false;
@@ -79,6 +82,7 @@ export class FloorManager {
     this._enemyDamageMultiplier = options.enemyDamageMultiplier  ?? 1;
     this._enemySpeedMultiplier  = options.enemySpeedMultiplier   ?? 1;
     this._monsterSheet          = options.monsterSheet          ?? 'monster_sheet_1';
+    this._getRandomBossCellKey  = options.getRandomBossCellKey   ?? null;
   }
 
   // ---------------------------------------------------------------------------
@@ -204,16 +208,21 @@ export class FloorManager {
         `FLOOR ${this._currentFloor} BOSS`;
     }
 
+    const isFirstBossFloor = !this._bossesOnly && this._currentFloor === this._bossEveryNFloors;
+    const bossSprite = isFirstBossFloor && this._getRandomBossCellKey
+      ? { sheet: this._getRandomBossCellKey() }
+      : {
+          sheet: 'boss_sheet',
+          frame: this._bossesOnly
+            ? Math.floor(Math.random() * (4 * 4))
+            : (this._currentFloor - 1) % (4 * 4),
+        };
+
     return {
       stats: { ...stats },
       isBoss: true,
       bossLabel,
-      sprite: {
-        sheet: 'boss_sheet',
-        frame: this._bossesOnly
-          ? Math.floor(Math.random() * (4 * 4))
-          : (this._currentFloor - 1) % (4 * 4),
-      },
+      sprite: bossSprite,
     };
   }
 

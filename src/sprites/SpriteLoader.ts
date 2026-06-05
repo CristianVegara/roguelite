@@ -3,6 +3,7 @@ import classSpriteUrl from '../assets/sprites/class_sprite.png?url';
 import bossSheetUrl from '../assets/sprites/boss_sheet.png?url';
 import monsterSheet1Url from '../assets/sprites/monster_sheet_1.png?url';
 import monsterSheet2Url from '../assets/sprites/monster_sheet_2.png?url';
+import monsterSheet3Url from '../assets/sprites/monster_sheet_3.png?url';
 
 const bossSheetCellModules = import.meta.glob('../assets/sprites/boss_sheet_cells/boss_sheet_*.png', { query: '?url', import: 'default', eager: true }) as Record<string, string>;
 export const BOSS_SHEET_CELL_TEXTURE_KEYS = Object.keys(bossSheetCellModules)
@@ -14,7 +15,7 @@ export function getRandomBossSheetCellKey(): string {
   return BOSS_SHEET_CELL_TEXTURE_KEYS[index];
 }
 
-export type MonsterSheetKey = 'monster_sheet_1' | 'monster_sheet_2';
+export type MonsterSheetKey = 'monster_sheet_1' | 'monster_sheet_2' | 'monster_sheet_3';
 export type SpriteSheetKey = 'boss_sheet' | MonsterSheetKey;
 
 export interface SpriteSheetInfo {
@@ -55,18 +56,26 @@ export const SPRITE_SHEETS: Record<SpriteSheetKey, SpriteSheetInfo> = {
   monster_sheet_1: {
     key: 'monster_sheet_1',
     url: monsterSheet1Url,
-    frameWidth: 352,
-    frameHeight: 192,
-    cols: 4,
-    rows: 4,
+    frameWidth: 125,
+    frameHeight: 89,
+    cols: 10,
+    rows: 3,
   },
   monster_sheet_2: {
     key: 'monster_sheet_2',
     url: monsterSheet2Url,
-    frameWidth: 352,
-    frameHeight: 192,
-    cols: 4,
-    rows: 4,
+    frameWidth: 125,
+    frameHeight: 89,
+    cols: 10,
+    rows: 3,
+  },
+  monster_sheet_3: {
+    key: 'monster_sheet_3',
+    url: monsterSheet3Url,
+    frameWidth: 125,
+    frameHeight: 89,
+    cols: 10,
+    rows: 3,
   },
 };
 
@@ -126,7 +135,8 @@ export function getClassSpriteFrame(classId: string): number | null {
 }
 
 export function chooseRunMonsterSheet(): MonsterSheetKey {
-  return Math.random() < 0.5 ? 'monster_sheet_1' : 'monster_sheet_2';
+  const variants: MonsterSheetKey[] = ['monster_sheet_1', 'monster_sheet_2', 'monster_sheet_3'];
+  return variants[Math.floor(Math.random() * variants.length)];
 }
 
 export function getEnemySheetFrameForFloor(floor: number): number {
