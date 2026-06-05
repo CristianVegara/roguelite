@@ -334,6 +334,21 @@
   border-radius:    var(--radius-full);
   font-size:        var(--text-caption);
   color:            var(--accent-nature);
+  cursor:           pointer;
+  transition:       background-color var(--transition-fast), border-color var(--transition-fast);
+}
+.hs-title-chip:hover {
+  background-color: rgba(57,153,106,0.16);
+}
+.hs-title-chip.is-active {
+  background-color: var(--accent-glow);
+  border-color: var(--accent-glow);
+  color: var(--text-on-accent);
+}
+.hs-title-hint {
+  margin:          var(--space-2) 0 var(--space-1);
+  font-size:       var(--text-caption);
+  color:           var(--text-muted);
 }
 
 .hs-stats-btn {

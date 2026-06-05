@@ -444,30 +444,36 @@ export class RulesEngine {
     }
 
     // ── 8. Lightning proc ────────────────────────────────────────────────
-    let lightningProc = false;
+    const lightningHits: number[] = [];
     if (this.hasUpgrade('ball_lightning') || this.hasUpgrade('spark')) {
       // ball_lightning and spark both use a charge-counter model (fire every N attacks)
       // Archmage class fires every 2 attacks; normally every 3
       const threshold = this.hasUpgrade('archmage_class') ? 2 : 3;
       this.state.chargeCounter++;
       if (this.state.chargeCounter >= threshold) {
-        lightningProc = true;
+        lightningHits.push(Math.max(1, Math.floor(dmg * (s.lightningDamage ?? 0.5))));
         this.state.chargeCounter = 0;
       }
     } else {
       const lChance = s.lightningChance ?? 0;
-      if (lChance > 0 && Math.random() < lChance) lightningProc = true;
+      if (lChance > 0 && Math.random() < lChance) {
+        lightningHits.push(Math.max(1, Math.floor(dmg * (s.lightningDamage ?? 0.5))));
+      }
     }
-    // Overload: crit → always chain lightning
-    if (isCrit && this.hasUpgrade('overload')) lightningProc = true;
-    // Thunder Engine: crit → massive lightning
-    if (isCrit && this.hasUpgrade('thunder_engine')) lightningProc = true;
+    // Overload: crit → always chain lightning if no lightning would otherwise occur
+    if (isCrit && this.hasUpgrade('overload') && lightningHits.length === 0) {
+      lightningHits.push(Math.max(1, Math.floor(dmg * (s.lightningDamage ?? 0.5))));
+    }
+    // Thunder Engine: crit → additional lightning hits for 50% of crit damage
+    if (isCrit && this.hasUpgrade('thunder_engine')) {
+      lightningHits.push(Math.max(1, Math.floor(dmg * 0.50)));
+    }
 
-    if (lightningProc) {
-      const lDmg = Math.max(1, Math.floor(dmg * (s.lightningDamage ?? 0.5)));
-      result.lightningDamage = lDmg;
+    for (const lDmg of lightningHits) {
+      result.lightningDamage += lDmg;
       result.floaters.push({ value: lDmg, type: 'lightning', target: 'enemy' });
     }
+    const lightningProc = lightningHits.length > 0;
 
     // ── 9. Area damage ───────────────────────────────────────────────────
     const areaFrac = s.areaPercent ?? 0;

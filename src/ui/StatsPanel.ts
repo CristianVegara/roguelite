@@ -26,12 +26,12 @@ export class StatsPanel {
   private expanded = false;
   private visible  = false;
 
-  private readonly PANEL_W   = 148;
-  private readonly DEFAULT_X = GAME_WIDTH - 148 - 4;   // 328
+  private readonly PANEL_W   = 192;
+  private readonly DEFAULT_X = GAME_WIDTH - 192 - 8;
   // 130 = 2px gap below the HP panels (top:66 + height:58 = 124px).
   // Previously 50, which overlapped the top bar zone.
   private readonly DEFAULT_Y = 130;
-  private readonly LINE_H    = 14;
+  private readonly LINE_H    = 18;
 
   // Drag state
   private dragging    = false;
@@ -68,15 +68,15 @@ export class StatsPanel {
     this.container.add(this.bgGfx);
 
     // Header text + drag handle
-    const header = this.scene.add.text(this.PANEL_W / 2, 8, 'BUILD STATS', {
-      fontSize: '10px', color: '#ffd700',
+    const header = this.addText(this.PANEL_W / 2, 8, 'BUILD STATS', {
+      fontSize: '12px', color: '#ffd700',
       fontFamily: 'monospace', fontStyle: 'bold',
     }).setOrigin(0.5, 0);
     this.container.add(header);
 
     // Close button (×)
-    const closeBtn = this.scene.add.text(this.PANEL_W - 6, 6, '×', {
-      fontSize: '14px', color: '#555577', fontFamily: 'monospace',
+    const closeBtn = this.addText(this.PANEL_W - 6, 6, '×', {
+      fontSize: '16px', color: '#555577', fontFamily: 'monospace',
     }).setOrigin(1, 0)
       .setInteractive({ cursor: 'pointer' })
       .on('pointerover',  function(this: Phaser.GameObjects.Text) { this.setColor('#e0e0e0'); })
@@ -85,8 +85,8 @@ export class StatsPanel {
     this.container.add(closeBtn);
 
     // Hint
-    const hint = this.scene.add.text(this.PANEL_W / 2, 20, '[Tab] toggle  [E] expand', {
-      fontSize: '7px', color: '#333355', fontFamily: 'monospace',
+    const hint = this.addText(this.PANEL_W / 2, 24, '[Tab] toggle  [E] expand', {
+      fontSize: '9px', color: '#333355', fontFamily: 'monospace',
     }).setOrigin(0.5, 0);
     this.container.add(hint);
 
@@ -122,8 +122,8 @@ export class StatsPanel {
 
     // Stat lines (18 = 12 compact + 5 historical + 1 buffer)
     for (let i = 0; i < 18; i++) {
-      const t = this.scene.add.text(6, 32 + i * this.LINE_H, '', {
-        fontSize: '9px', color: '#9999bb', fontFamily: 'monospace',
+      const t = this.addText(6, 36 + i * this.LINE_H, '', {
+        fontSize: '11px', color: '#9999bb', fontFamily: 'monospace',
       }).setOrigin(0, 0);
       this.lines.push(t);
       this.container.add(t);
@@ -159,6 +159,14 @@ export class StatsPanel {
 
   private resetPosition(): void {
     this.moveTo(this.DEFAULT_X, this.DEFAULT_Y);
+  }
+
+  private addText(x: number, y: number, text: string, style: Phaser.Types.GameObjects.Text.TextStyle): Phaser.GameObjects.Text {
+    const t = this.scene.add.text(x, y, text, style);
+    if (typeof (t as any).setResolution === 'function') {
+      (t as any).setResolution(window.devicePixelRatio || 1);
+    }
+    return t;
   }
 
   // ---------------------------------------------------------------------------

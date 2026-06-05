@@ -14,6 +14,7 @@
  */
 
 import { ServiceLocator }                    from '../services/ServiceLocator';
+import { ALL_MILESTONES }                     from '../services/types';
 import { metaService, UPGRADE_INFO, META_MAX_LEVEL, UpgradeKey } from '../meta/MetaService';
 import { MODES_REGISTRY, GameModeConfig }    from '../modes/GameModeConfig';
 import { router }                            from '../router/Router';
@@ -325,8 +326,9 @@ class HomeScreen {
 
     card.append(nameEl, subEl);
 
+    const titleEl = el('span', 'hs-profile-title');
     if (profile.active_title) {
-      const titleEl = el('span', 'hs-profile-title'); titleEl.textContent = `[${profile.active_title}]`;
+      titleEl.textContent = `[${profile.active_title}]`;
       card.appendChild(titleEl);
     }
     pane.appendChild(card);
@@ -355,8 +357,25 @@ class HomeScreen {
       const empty = el('span', 'hs-empty'); empty.textContent = 'Complete a run to earn your first title.';
       titles.appendChild(empty);
     } else {
-      profile.unlocked_titles.slice(0, 6).forEach(id => {
-        const chip = el('span', 'hs-title-chip'); chip.textContent = id;
+      const hint = el('div', 'hs-title-hint');
+      hint.textContent = 'Tap a title to equip it.';
+      pane.appendChild(hint);
+
+      profile.unlocked_titles.forEach(id => {
+        const chip = el('button', 'hs-title-chip');
+        chip.textContent = ALL_MILESTONES.find(m => m.id === id)?.title ?? id;
+        if (id === profile.active_title) chip.classList.add('is-active');
+
+        chip.addEventListener('click', () => {
+          if (id === profile.active_title) return;
+          ServiceLocator.profile.updateProfile({ active_title: id });
+          profile.active_title = id;
+          titleEl.textContent = `[${id}]`;
+          if (!card.contains(titleEl)) card.appendChild(titleEl);
+          titles.querySelectorAll('.hs-title-chip').forEach((el) => el.classList.remove('is-active'));
+          chip.classList.add('is-active');
+        });
+
         titles.appendChild(chip);
       });
     }
