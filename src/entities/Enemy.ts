@@ -39,11 +39,19 @@ export class Enemy {
 
     this.attackTimer = -(500 + Math.random() * 300);
 
-    const textureKey = this.isBoss ? 'boss' : 'enemy';
-    this.sprite = scene.add.image(x, y, textureKey);
+    const textureKey = config?.sprite?.sheet ?? (this.isBoss ? 'boss' : 'enemy');
+    const frame = config?.sprite?.frame;
+    const textureExists = scene.textures.exists(textureKey);
+    const frameIsValid = textureExists && frame != null && scene.textures.get(textureKey).has(String(frame));
+    const useKey = frameIsValid ? textureKey : (this.isBoss ? 'boss' : 'enemy');
+    const useFrame = frameIsValid ? frame : undefined;
 
-    const barWidth = this.isBoss ? 100 : 70;
-    const barY     = this.isBoss ? y - 50 : y - 40;
+    this.sprite = scene.add.image(x, y, useKey, useFrame);
+    this.sprite.setScale(this.isBoss ? 0.60 : 0.52);
+
+    const spriteHalfHeight = this.sprite.displayHeight / 2;
+    const barWidth = this.isBoss ? 140 : 86;
+    const barY = y - spriteHalfHeight - 10;
     this.healthBar = new HealthBar(scene, x, barY, barWidth, 9);
 
     // Debuff text sits just above the health bar

@@ -5,11 +5,17 @@ import { FloorModifier, rollFloorModifier, buildSpecialEnemyStats } from './Floo
  * Describes everything GameScene needs to spawn an enemy for the current floor.
  * Defined here so FloorManager owns the full config without importing from entities.
  */
+export interface EnemySpriteConfig {
+  sheet: 'boss_sheet' | 'monster_sheet_1' | 'monster_sheet_2';
+  frame: number;
+}
+
 export interface EnemyConfig {
   stats: CombatStats;
   isBoss: boolean;
   /** Display name shown in the HUD and boss intro. Empty for regular enemies. */
   bossLabel: string;
+  sprite?: EnemySpriteConfig;
 }
 
 /**
@@ -29,6 +35,8 @@ export interface FloorManagerOptions {
   enemyDamageMultiplier?:  number;
   /** Nightmare: multiply enemy attack speed by this factor. */
   enemySpeedMultiplier?:   number;
+  /** Determines which monster sprite sheet to use for regular enemies. */
+  monsterSheet?:           'monster_sheet_1' | 'monster_sheet_2';
 }
 
 /**
@@ -61,6 +69,8 @@ export class FloorManager {
   private readonly _enemyDamageMultiplier:   number;
   private readonly _enemySpeedMultiplier:    number;
 
+  private readonly _monsterSheet: 'monster_sheet_1' | 'monster_sheet_2';
+
   constructor(options: FloorManagerOptions = {}) {
     this._bossesOnly            = options.bossesOnly            ?? false;
     this._allFloorsModified     = options.allFloorsModified      ?? false;
@@ -68,6 +78,7 @@ export class FloorManager {
     this._enemyHpMultiplier     = options.enemyHpMultiplier      ?? 1;
     this._enemyDamageMultiplier = options.enemyDamageMultiplier  ?? 1;
     this._enemySpeedMultiplier  = options.enemySpeedMultiplier   ?? 1;
+    this._monsterSheet          = options.monsterSheet          ?? 'monster_sheet_1';
   }
 
   // ---------------------------------------------------------------------------
@@ -159,7 +170,15 @@ export class FloorManager {
     if (this._currentModifier?.mutateEnemy) {
       this._currentModifier.mutateEnemy(base);
     }
-    return { stats: base, isBoss: false, bossLabel: '' };
+    return {
+      stats: base,
+      isBoss: false,
+      bossLabel: '',
+      sprite: {
+        sheet: this._monsterSheet,
+        frame: (this._currentFloor - 1) % (4 * 4),
+      },
+    };
   }
 
   /**
@@ -185,7 +204,15 @@ export class FloorManager {
         `FLOOR ${this._currentFloor} BOSS`;
     }
 
-    return { stats: { ...stats }, isBoss: true, bossLabel };
+    return {
+      stats: { ...stats },
+      isBoss: true,
+      bossLabel,
+      sprite: {
+        sheet: 'boss_sheet',
+        frame: (this._currentFloor - 1) % (4 * 4),
+      },
+    };
   }
 
   // ---------------------------------------------------------------------------

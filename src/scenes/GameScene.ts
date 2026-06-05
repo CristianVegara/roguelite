@@ -14,6 +14,7 @@ import { StatsPanel }  from '../ui/StatsPanel';
 import { BuildPanel }  from '../ui/BuildPanel';
 import { ClassDefinition, findClass } from '../data/ClassDefinition';
 import { getRunConfig } from '../RunConfig';
+import { SpriteLoader, type MonsterSheetKey } from '../sprites/SpriteLoader';
 import { XPManager }    from '../combat/XPManager';
 // ── Bridge ────────────────────────────────────────────────────────────────────
 import { bus }      from '../bridge/GameEventBus';
@@ -64,6 +65,7 @@ export class GameScene extends Phaser.Scene {
   private pendingLevelUpUpgrade = false;
   private pendingBossUpgrade    = false;
   private currentClass: ClassDefinition | null = null;
+  private monsterSheet: MonsterSheetKey = 'monster_sheet_1';
   private runStartTime     = 0;   // Date.now() at run start, for duration tracking
   /** Display name of the current enemy — tracked here since Enemy doesn't store it. */
   private currentEnemyName = 'ENEMY';
@@ -90,6 +92,10 @@ export class GameScene extends Phaser.Scene {
   create(): void {
     this.state        = 'fighting';
     const cfg0        = getRunConfig();
+    this.monsterSheet  = cfg0.modeId === 'boss_rush'
+      ? 'monster_sheet_1'
+      : SpriteLoader.chooseRunMonsterSheet();
+
     this.floorManager = new FloorManager({
       bossesOnly:            cfg0.rules.bossesOnly,
       allFloorsModified:     cfg0.rules.allFloorsModified,
@@ -97,12 +103,16 @@ export class GameScene extends Phaser.Scene {
       enemyHpMultiplier:     cfg0.rules.enemyHpMultiplier,
       enemyDamageMultiplier: cfg0.rules.enemyDamageMultiplier,
       enemySpeedMultiplier:  cfg0.rules.enemySpeedMultiplier,
+      monsterSheet:          this.monsterSheet,
     });
     this.owned               = new Map();
     this.ownedRelics         = new Set();
     this.pendingLevelUpUpgrade = false;
     this.pendingBossUpgrade    = false;
     this._runWon               = false;
+
+    const cfg = getRunConfig();
+    this.currentClass = findClass(cfg.classId);
     this.drawBackground();
     this.createEntities();
 
@@ -111,8 +121,6 @@ export class GameScene extends Phaser.Scene {
     this.xpManager.onLevelUp = () => { this.pendingLevelUpUpgrade = true; };
 
     // Apply chosen class (from ClassScene → RunConfig)
-    const cfg = getRunConfig();
-    this.currentClass = findClass(cfg.classId);
     if (this.currentClass) {
       this.currentClass.apply(this.player.stats, this.engine);
     }
@@ -948,7 +956,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createEntities(): void {
-    this.player = new Player(this, PLAYER_X, COMBAT_Y);
+    const classFrame = this.currentClass ? SpriteLoader.getClassSpriteFrame(this.currentClass.id) : undefined;
+    this.player = new Player(this, PLAYER_X, COMBAT_Y, classFrame ?? undefined);
 
     // Nightmare: skip permanent upgrade bonuses so meta progression has no effect
     if (!getRunConfig().rules.noMetaBonuses) {

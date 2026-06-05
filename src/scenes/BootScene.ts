@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { ServiceLocator } from '../services/ServiceLocator';
 import { router }         from '../router/Router';
+import { SpriteLoader }   from '../sprites/SpriteLoader';
 
 /**
  * BootScene
@@ -21,13 +22,17 @@ export class BootScene extends Phaser.Scene {
 
   preload(): void {
     this.load.image('background', 'images/background/background.png');
+    SpriteLoader.preload(this);
   }
 
   create(): void {
     // 1. Boot all platform services before any scene routing
     ServiceLocator.init();
 
-    // 2. Generate placeholder textures
+    // 2. Probe class sprite availability for HTML fallback and HUD styling.
+    SpriteLoader.probeClassSpriteSheet();
+
+    // 3. Generate placeholder textures
     this.generatePlaceholderTextures();
 
     // 3. Route: first-time player → name-entry; returning player → home (HTML)
