@@ -653,6 +653,10 @@ export class GameScene extends Phaser.Scene {
       : this.floorManager.buildEnemyConfig();
     const mod    = this.floorManager.currentModifier;
 
+    if (rules.bossesOnly) {
+      config.sprite = { sheet: SpriteLoader.getRandomBossSheetCellKey() };
+    }
+
     this.enemy.destroy();
     this.enemy = new Enemy(this, ENEMY_X, COMBAT_Y, config);
 

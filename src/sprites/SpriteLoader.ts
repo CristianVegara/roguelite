@@ -4,6 +4,16 @@ import bossSheetUrl from '../assets/sprites/boss_sheet.png?url';
 import monsterSheet1Url from '../assets/sprites/monster_sheet_1.png?url';
 import monsterSheet2Url from '../assets/sprites/monster_sheet_2.png?url';
 
+const bossSheetCellModules = import.meta.glob('../assets/sprites/boss_sheet_cells/boss_sheet_*.png', { query: '?url', import: 'default', eager: true }) as Record<string, string>;
+export const BOSS_SHEET_CELL_TEXTURE_KEYS = Object.keys(bossSheetCellModules)
+  .map((filePath) => filePath.split('/').pop()!.replace('.png', ''))
+  .sort((a, b) => a.localeCompare(b));
+
+export function getRandomBossSheetCellKey(): string {
+  const index = Math.floor(Math.random() * BOSS_SHEET_CELL_TEXTURE_KEYS.length);
+  return BOSS_SHEET_CELL_TEXTURE_KEYS[index];
+}
+
 export type MonsterSheetKey = 'monster_sheet_1' | 'monster_sheet_2';
 export type SpriteSheetKey = 'boss_sheet' | MonsterSheetKey;
 
@@ -75,6 +85,14 @@ export function preloadSpriteSheets(scene: Phaser.Scene): void {
     });
   });
 
+  Object.entries(bossSheetCellModules).forEach(([filePath, moduleUrl]) => {
+    const textureKey = filePath.split('/').pop()!.replace('.png', '');
+    const url = typeof moduleUrl === 'string'
+      ? moduleUrl
+      : (moduleUrl as { default?: string }).default ?? String(moduleUrl);
+    scene.load.image(textureKey, url);
+  });
+
   scene.load.on('loaderror', (file: any) => {
     console.warn('[SpriteLoader] Failed to load sprite sheet:', file.key, file.src);
   });
@@ -127,4 +145,5 @@ export const SpriteLoader = {
   chooseRunMonsterSheet,
   getEnemySheetFrameForFloor,
   getBossSheetFrameForFloor,
+  getRandomBossSheetCellKey,
 };

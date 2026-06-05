@@ -6,8 +6,8 @@ import { FloorModifier, rollFloorModifier, buildSpecialEnemyStats } from './Floo
  * Defined here so FloorManager owns the full config without importing from entities.
  */
 export interface EnemySpriteConfig {
-  sheet: 'boss_sheet' | 'monster_sheet_1' | 'monster_sheet_2';
-  frame: number;
+  sheet: string;
+  frame?: number;
 }
 
 export interface EnemyConfig {
@@ -210,7 +210,9 @@ export class FloorManager {
       bossLabel,
       sprite: {
         sheet: 'boss_sheet',
-        frame: (this._currentFloor - 1) % (4 * 4),
+        frame: this._bossesOnly
+          ? Math.floor(Math.random() * (4 * 4))
+          : (this._currentFloor - 1) % (4 * 4),
       },
     };
   }

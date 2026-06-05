@@ -43,7 +43,7 @@ export class Enemy {
     const frame = config?.sprite?.frame;
     const textureExists = scene.textures.exists(textureKey);
     const frameIsValid = textureExists && frame != null && scene.textures.get(textureKey).has(String(frame));
-    const useKey = frameIsValid ? textureKey : (this.isBoss ? 'boss' : 'enemy');
+    const useKey = textureExists ? textureKey : (this.isBoss ? 'boss' : 'enemy');
     const useFrame = frameIsValid ? frame : undefined;
 
     this.sprite = scene.add.image(x, y, useKey, useFrame);
