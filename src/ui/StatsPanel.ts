@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { CombatStats } from '../combat/CombatStats';
 import { RulesEngine }  from '../combat/RulesEngine';
+import { Player }       from '../entities/Player';
 import { GAME_WIDTH, GAME_HEIGHT } from '../config/GameConstants';
 
 /**
@@ -19,19 +20,28 @@ export class StatsPanel {
   private readonly scene: Phaser.Scene;
   private readonly stats: CombatStats;
   private readonly engine: RulesEngine;
+  private readonly player: Player;
 
   private container!: Phaser.GameObjects.Container;
   private bgGfx!:     Phaser.GameObjects.Graphics;
   private lines: Phaser.GameObjects.Text[] = [];
+  private header!:   Phaser.GameObjects.Text;
+  private hint!:     Phaser.GameObjects.Text;
+  private closeBtn!: Phaser.GameObjects.Text;
   private expanded = false;
   private visible  = false;
 
-  private readonly PANEL_W   = 192;
-  private readonly DEFAULT_X = GAME_WIDTH - 192 - 8;
-  // 130 = 2px gap below the HP panels (top:66 + height:58 = 124px).
-  // Previously 50, which overlapped the top bar zone.
-  private readonly DEFAULT_Y = 130;
-  private readonly LINE_H    = 18;
+  private readonly PANEL_W      = 192;
+  private readonly MIN_PANEL_W  = 228;
+  private readonly DEFAULT_X    = GAME_WIDTH - 192 - 8;
+  private readonly DEFAULT_Y    = 170;
+  private readonly LINE_H       = 18;
+  private readonly COLUMN_W     = 106;
+  private readonly COLUMN_GAP   = 8;
+
+  private currentPanelW = this.PANEL_W;
+  private currentPanelH = 200;
+  private followPlayer   = true;
 
   // Drag state
   private dragging    = false;
@@ -40,8 +50,9 @@ export class StatsPanel {
   private panelX      = 0;
   private panelY      = 0;
 
-  constructor(scene: Phaser.Scene, stats: CombatStats, engine: RulesEngine) {
+  constructor(scene: Phaser.Scene, player: Player, stats: CombatStats, engine: RulesEngine) {
     this.scene  = scene;
+    this.player = player;
     this.stats  = stats;
     this.engine = engine;
     this.panelX = this.DEFAULT_X;
@@ -68,27 +79,27 @@ export class StatsPanel {
     this.container.add(this.bgGfx);
 
     // Header text + drag handle
-    const header = this.addText(this.PANEL_W / 2, 8, 'BUILD STATS', {
+    this.header = this.addText(this.PANEL_W / 2, 8, 'BUILD STATS', {
       fontSize: '12px', color: '#ffd700',
       fontFamily: 'monospace', fontStyle: 'bold',
     }).setOrigin(0.5, 0);
-    this.container.add(header);
+    this.container.add(this.header);
 
     // Close button (×)
-    const closeBtn = this.addText(this.PANEL_W - 6, 6, '×', {
+    this.closeBtn = this.addText(this.PANEL_W - 6, 6, '×', {
       fontSize: '16px', color: '#555577', fontFamily: 'monospace',
     }).setOrigin(1, 0)
       .setInteractive({ cursor: 'pointer' })
       .on('pointerover',  function(this: Phaser.GameObjects.Text) { this.setColor('#e0e0e0'); })
       .on('pointerout',   function(this: Phaser.GameObjects.Text) { this.setColor('#555577'); })
       .on('pointerdown',  () => { this.visible = false; this.container.setVisible(false); });
-    this.container.add(closeBtn);
+    this.container.add(this.closeBtn);
 
     // Hint
-    const hint = this.addText(this.PANEL_W / 2, 24, '[Tab] toggle  [E] expand', {
+    this.hint = this.addText(this.PANEL_W / 2, 24, '[Tab] toggle  [E] expand', {
       fontSize: '9px', color: '#333355', fontFamily: 'monospace',
     }).setOrigin(0.5, 0);
-    this.container.add(hint);
+    this.container.add(this.hint);
 
     // Drag zone over the header row
     const dragZone = this.scene.add.zone(0, 0, this.PANEL_W, 28)
@@ -97,6 +108,7 @@ export class StatsPanel {
     this.container.add(dragZone);
 
     dragZone.on('pointerdown', (ptr: Phaser.Input.Pointer) => {
+      this.followPlayer = false;
       this.dragging    = true;
       this.dragOffsetX = ptr.x - this.panelX;
       this.dragOffsetY = ptr.y - this.panelY;
@@ -122,7 +134,7 @@ export class StatsPanel {
 
     // Stat lines (18 = 12 compact + 5 historical + 1 buffer)
     for (let i = 0; i < 18; i++) {
-      const t = this.addText(6, 36 + i * this.LINE_H, '', {
+      const t = this.addText(0, 0, '', {
         fontSize: '11px', color: '#9999bb', fontFamily: 'monospace',
       }).setOrigin(0, 0);
       this.lines.push(t);
@@ -132,7 +144,12 @@ export class StatsPanel {
 
   /** Called by HUD button or keydown-TAB. */
   toggle(): void {
+    const wasVisible = this.visible;
     this.visible = !this.visible;
+    if (this.visible && !wasVisible && this.followPlayer) {
+      this.updatePosition();
+      this.followPlayer = false;
+    }
     this.container.setVisible(this.visible);
   }
 
@@ -149,15 +166,27 @@ export class StatsPanel {
   // ---------------------------------------------------------------------------
 
   private moveTo(x: number, y: number): void {
-    // Clamp so panel always stays fully on-screen
-    const clampedX = Phaser.Math.Clamp(x, 0, GAME_WIDTH  - this.PANEL_W);
-    const clampedY = Phaser.Math.Clamp(y, 0, GAME_HEIGHT - 40);
+    const width  = this.currentPanelW;
+    const height = this.currentPanelH;
+    const clampedX = Phaser.Math.Clamp(x, 0, GAME_WIDTH  - width);
+    const clampedY = Phaser.Math.Clamp(y, 0, GAME_HEIGHT - height - 4);
     this.panelX = clampedX;
     this.panelY = clampedY;
     this.container.setPosition(clampedX, clampedY);
   }
 
+  private updatePosition(): void {
+    if (!this.followPlayer) return;
+    const cam = this.scene.cameras.main;
+    const screenX = this.player.x - cam.worldView.x;
+    const screenY = this.player.y - cam.worldView.y;
+    const desiredX = screenX - this.currentPanelW / 2;
+    const desiredY = screenY + 52;
+    this.moveTo(desiredX, desiredY);
+  }
+
   private resetPosition(): void {
+    this.followPlayer = true;
     this.moveTo(this.DEFAULT_X, this.DEFAULT_Y);
   }
 
@@ -175,6 +204,7 @@ export class StatsPanel {
 
   update(): void {
     if (!this.visible) return;
+    if (this.followPlayer && !this.dragging) this.updatePosition();
     const s = this.stats;
     const e = this.engine;
 
@@ -217,14 +247,21 @@ export class StatsPanel {
     ];
 
     const rows = this.expanded ? [...compact, ...historical] : compact;
+    const columnCount = Math.max(1, Math.ceil(rows.length / 5));
+    const panelW = Math.max(this.MIN_PANEL_W, 16 + columnCount * this.COLUMN_W + (columnCount - 1) * this.COLUMN_GAP);
+    const bgH = 32 + Math.min(rows.length, 5) * this.LINE_H + 8;
+    this.currentPanelW = panelW;
+    this.currentPanelH = bgH;
 
-    // Resize background height dynamically
-    const bgH = 32 + rows.length * this.LINE_H + 8;
     this.bgGfx.clear();
     this.bgGfx.fillStyle(0x000000, 0.80);
-    this.bgGfx.fillRoundedRect(0, 0, this.PANEL_W, bgH, 6);
+    this.bgGfx.fillRoundedRect(0, 0, panelW, bgH, 6);
     this.bgGfx.lineStyle(1, 0x2a2a4a);
-    this.bgGfx.strokeRoundedRect(0, 0, this.PANEL_W, bgH, 6);
+    this.bgGfx.strokeRoundedRect(0, 0, panelW, bgH, 6);
+
+    this.header.setX(panelW / 2);
+    this.closeBtn.setX(panelW - 6);
+    this.hint.setX(panelW / 2);
 
     // Clamp Y so dynamic resize never pushes panel off bottom
     const maxY = GAME_HEIGHT - bgH - 4;
@@ -234,14 +271,19 @@ export class StatsPanel {
 
     rows.forEach(([label, value], i) => {
       if (i >= this.lines.length) return;
+      const col = Math.floor(i / 5);
+      const row = i % 5;
+      const x = 8 + col * (this.COLUMN_W + this.COLUMN_GAP);
+      const y = 36 + row * this.LINE_H;
       const color = this.colorForLabel(label);
       this.lines[i]
+        .setPosition(x, y)
         .setText(`${label.padEnd(9)} ${value}`)
         .setColor(color)
         .setVisible(true);
     });
     // Hide unused lines
-    for (let i = rows.length; i < this.lines.length; i++) {  // hide unused
+    for (let i = rows.length; i < this.lines.length; i++) {
       this.lines[i].setVisible(false);
     }
   }

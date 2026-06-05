@@ -129,8 +129,8 @@ export class GameScene extends Phaser.Scene {
 
     this.applyModeRules();
     this.createOverlay();
-    this.statsPanel  = new StatsPanel(this, this.player.stats, this.engine);
-    this.buildPanel  = new BuildPanel(this, this.owned, this.ownedRelics);
+    this.statsPanel  = new StatsPanel(this, this.player, this.player.stats, this.engine);
+    this.buildPanel  = new BuildPanel(this, this.player, this.owned, this.ownedRelics);
     void this.buildPanel;   // panel is self-managing via B key binding
 
     if (cfg0.modeId === 'one_hp' || cfg0.modeId === 'boss_rush') {

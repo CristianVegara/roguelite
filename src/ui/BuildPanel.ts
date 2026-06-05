@@ -3,6 +3,7 @@ import { GAME_WIDTH, GAME_HEIGHT } from '../config/GameConstants';
 import { OwnedUpgrades }          from '../data/UpgradeDefinition';
 import { ALL_UPGRADES }           from '../data/AllUpgrades';
 import { ALL_RELICS }             from '../data/AllRelics';
+import { Player }                 from '../entities/Player';
 
 /**
  * BuildPanel — in-run build overview toggled with [B].
@@ -15,26 +16,32 @@ import { ALL_RELICS }             from '../data/AllRelics';
  */
 export class BuildPanel {
   private readonly scene:  Phaser.Scene;
+  private readonly player: Player;
   private readonly owned:  OwnedUpgrades;
   private readonly relics: Set<string>;
 
   private container!: Phaser.GameObjects.Container;
   private visible = false;
 
-  private readonly PANEL_W  = 200;
-  private readonly PANEL_X  = GAME_WIDTH - 200 - 4;   // 276
-  // 130 = 2px gap below the HP panels (top:66 + height:58 = 124px).
-  // Previously 50, which overlapped the top bar zone.
-  private readonly PANEL_Y  = 130;
-  private readonly MAX_H    = GAME_HEIGHT - 160;       // adjusted to match new top
-  private readonly LINE_H   = 15;
+  private readonly PANEL_W      = 200;
+  private readonly PANEL_X      = GAME_WIDTH - 200 - 4;
+  private readonly PANEL_Y      = 170;
+  private readonly MAX_H        = GAME_HEIGHT - 160;
+  private readonly LINE_H       = 15;
+  private readonly COLUMN_W     = 150;
+  private readonly COLUMN_GAP   = 8;
+  private readonly MAX_ROWS     = 5;
+
+  private currentPanelW = this.PANEL_W;
+  private currentPanelH = 0;
 
   // Scrolling
   private scrollOffset = 0;
   private totalContentH = 0;
 
-  constructor(scene: Phaser.Scene, owned: OwnedUpgrades, relics: Set<string>) {
+  constructor(scene: Phaser.Scene, player: Player, owned: OwnedUpgrades, relics: Set<string>) {
     this.scene  = scene;
+    this.player = player;
     this.owned  = owned;
     this.relics = relics;
     this.build();
@@ -57,6 +64,7 @@ export class BuildPanel {
     if (this.visible) {
       this.scrollOffset = 0;
       this.rebuild();
+      this.updatePosition();
     }
     this.container.setVisible(this.visible);
   }
@@ -81,9 +89,9 @@ export class BuildPanel {
 
     this.scene.input.on('pointerdown', (ptr: Phaser.Input.Pointer) => {
       if (!this.visible) return;
-      // Only respond to touches/clicks inside the panel bounding box
-      if (ptr.x < this.PANEL_X || ptr.x > this.PANEL_X + this.PANEL_W) return;
-      if (ptr.y < this.PANEL_Y || ptr.y > this.PANEL_Y + this.MAX_H)   return;
+      const bounds = this.container.getBounds();
+      if (ptr.x < bounds.x || ptr.x > bounds.right) return;
+      if (ptr.y < bounds.y || ptr.y > bounds.bottom) return;
       isDragging    = true;
       dragStartY    = ptr.y;
       dragStartOff  = this.scrollOffset;
@@ -110,25 +118,34 @@ export class BuildPanel {
     const ownedEntries = [...this.owned.entries()].filter(([, stacks]) => stacks > 0);
     const relicEntries = [...this.relics];
 
-    // Compute total content height
-    const SECTION_H  = 18;
-    const ENTRY_H    = this.LINE_H;
-    this.totalContentH =
-      SECTION_H + ownedEntries.length * ENTRY_H + 6 +
-      SECTION_H + relicEntries.length * ENTRY_H + 6;
+    const upgradeRows = Math.max(1, ownedEntries.length);
+    const upgradeCols = Math.max(1, Math.ceil(upgradeRows / this.MAX_ROWS));
+    const relicRows   = Math.max(1, relicEntries.length);
+    const relicCols   = Math.max(1, Math.ceil(relicRows / this.MAX_ROWS));
 
-    const panelH = Math.min(this.MAX_H, this.totalContentH + 32);
+    const upgradeSectionHeight = 16 + Math.min(upgradeRows, this.MAX_ROWS) * this.LINE_H + 4;
+    const relicSectionHeight   = 16 + Math.min(relicRows, this.MAX_ROWS) * this.LINE_H + 4;
+    const featureSectionWidth  = ownedEntries.length === 0 ? this.COLUMN_W : upgradeCols * this.COLUMN_W + (upgradeCols - 1) * this.COLUMN_GAP;
+    const relicSectionWidth    = relicEntries.length === 0 ? this.COLUMN_W : relicCols * this.COLUMN_W + (relicCols - 1) * this.COLUMN_GAP;
+    const sectionWidth         = Math.max(featureSectionWidth, relicSectionWidth);
+
+    const totalContent = 32 + upgradeSectionHeight + relicSectionHeight + 8;
+    this.totalContentH = totalContent;
+    const panelW = Math.min(GAME_WIDTH - 8, 16 + sectionWidth);
+    const panelH = Math.min(this.MAX_H, totalContent);
+    this.currentPanelW = panelW;
+    this.currentPanelH = panelH;
 
     // Background
     const bg = this.scene.add.graphics();
     bg.fillStyle(0x000000, 0.88);
-    bg.fillRoundedRect(0, 0, this.PANEL_W, panelH, 6);
+    bg.fillRoundedRect(0, 0, panelW, panelH, 6);
     bg.lineStyle(1, 0x2a2a4a);
-    bg.strokeRoundedRect(0, 0, this.PANEL_W, panelH, 6);
+    bg.strokeRoundedRect(0, 0, panelW, panelH, 6);
     this.container.add(bg);
 
     // Close button [×]
-    const closeBtn = this.scene.add.text(this.PANEL_W - 8, 8, '×', {
+    const closeBtn = this.addText(panelW - 8, 8, '×', {
       fontSize: '14px', color: '#555577', fontFamily: 'monospace',
     }).setOrigin(1, 0)
       .setInteractive({ cursor: 'pointer' })
@@ -138,85 +155,69 @@ export class BuildPanel {
     this.container.add(closeBtn);
 
     // Header
-    const header = this.scene.add.text(this.PANEL_W / 2, 8, 'BUILD  [B]', {
+    const header = this.addText(panelW / 2, 8, 'BUILD  [B]', {
       fontSize: '10px', color: '#ffd700',
       fontFamily: 'monospace', fontStyle: 'bold',
     }).setOrigin(0.5, 0);
     this.container.add(header);
 
-    // Content clip mask
-    const maskG = this.scene.make.graphics({});
-    maskG.fillRect(
-      this.PANEL_X, this.PANEL_Y + 24,
-      this.PANEL_W, panelH - 28,
-    );
-    const mask = maskG.createGeometryMask();
-
-    const contentContainer = this.scene.add.container(0, 24 - this.scrollOffset);
-    contentContainer.setMask(mask);
+    const contentContainer = this.scene.add.container(0, 24);
     this.container.add(contentContainer);
 
-    let y = 0;
+    let sectionY = 0;
 
     // ── Upgrades section ─────────────────────────────────────────────────
-    const upgLabel = this.scene.add.text(6, y, 'UPGRADES', {
-      fontSize: '8px', color: '#333355',
-      fontFamily: 'monospace', letterSpacing: 1,
+    const upgLabel = this.addText(8, sectionY, 'UPGRADES', {
+      fontSize: '8px', color: '#333355', fontFamily: 'monospace', letterSpacing: 1,
     });
     contentContainer.add(upgLabel);
-    y += 16;
 
+    const upgradeBaseY = sectionY + 16;
     if (ownedEntries.length === 0) {
       contentContainer.add(
-        this.scene.add.text(8, y, 'none yet', {
+        this.addText(8, upgradeBaseY, 'none yet', {
           fontSize: '9px', color: '#2a2a4a', fontFamily: 'monospace',
         }),
       );
-      y += this.LINE_H;
     } else {
       const tierColors: Record<string, number> = {
         starter: 0x555577, synergy: 0x2ecc71,
         transformation: 0x3498db, keystone: 0xffd700,
       };
 
-      for (const [id, stacks] of ownedEntries) {
+      ownedEntries.forEach(([id, stacks], index) => {
         const def = ALL_UPGRADES.find(u => u.id === id);
-        if (!def) continue;
+        if (!def) return;
 
-        const col = `#${def.color.toString(16).padStart(6, '0')}`;
+        const col = Math.floor(index / this.MAX_ROWS);
+        const row = index % this.MAX_ROWS;
+        const x = 8 + col * (this.COLUMN_W + this.COLUMN_GAP);
+        const y = upgradeBaseY + row * this.LINE_H;
 
-        // ── Name (truncated to leave room for dot zone) ───────────────────
+        const color = `#${def.color.toString(16).padStart(6, '0')}`;
         const maxChars  = def.maxStacks > 1 ? 16 : 20;
         const label     = def.name.length > maxChars
           ? def.name.slice(0, maxChars - 1) + '…'
           : def.name;
-        const nameText  = this.scene.add.text(8, y, label, {
-          fontSize: '9px', color: col, fontFamily: 'monospace',
-        });
-        contentContainer.add(nameText);
 
-        // ── Stack dots (only for stackable upgrades) ──────────────────────
-        // Layout: filled dots for owned stacks, dim outline dots for remaining
-        // capacity. Max 8 shown. Rightmost dot at x = PANEL_W - 18 (leaves
-        // room for the tier dot at PANEL_W - 10). Dots step 8px left each.
+        contentContainer.add(this.scene.add.text(x, y, label, {
+          fontSize: '9px', color, fontFamily: 'monospace',
+        }));
+
         if (def.maxStacks > 1) {
-          const maxDots  = Math.min(def.maxStacks, 8);
-          const dotStep  = 8;
-          const dotCY    = y + 5;  // vertical centre of row
-          const dotR     = 2.5;
-          const rightEdge = this.PANEL_W - 18;
-
+          const maxDots = Math.min(def.maxStacks, 8);
+          const dotStep = 8;
+          const dotCY   = y + 5;
+          const dotR    = 2.5;
+          const rightEdge = x + this.COLUMN_W - 18;
           const dotsG = this.scene.add.graphics();
 
           for (let i = 0; i < maxDots; i++) {
             const dotX = rightEdge - (maxDots - 1 - i) * dotStep;
-            const owned = i < stacks;
-            if (owned) {
-              // Filled dot in upgrade colour
+            if (i < stacks) {
               dotsG.fillStyle(def.color, 1);
               dotsG.fillCircle(dotX, dotCY, dotR);
             } else {
-              // Hollow outline dot in a dark-muted colour
               dotsG.lineStyle(1, 0x2a2a5a, 0.9);
               dotsG.strokeCircle(dotX, dotCY, dotR);
             }
@@ -224,53 +225,75 @@ export class BuildPanel {
           contentContainer.add(dotsG);
         }
 
-        // ── Tier dot (far right) ──────────────────────────────────────────
         const tierDot = this.scene.add.graphics();
         tierDot.fillStyle(tierColors[def.tier] ?? 0x555577);
-        tierDot.fillCircle(this.PANEL_W - 10, y + 5, 3);
+        tierDot.fillCircle(x + this.COLUMN_W - 10, y + 5, 3);
         contentContainer.add(tierDot);
-
-        y += this.LINE_H;
-      }
+      });
     }
 
-    y += 4;
+    sectionY += upgradeSectionHeight;
+    sectionY += 8;
 
     // ── Relics section ───────────────────────────────────────────────────
-    const relicLabel = this.scene.add.text(6, y, 'RELICS', {
-      fontSize: '8px', color: '#333355',
-      fontFamily: 'monospace', letterSpacing: 1,
+    const relicLabel = this.scene.add.text(8, sectionY, 'RELICS', {
+      fontSize: '8px', color: '#333355', fontFamily: 'monospace', letterSpacing: 1,
     });
     contentContainer.add(relicLabel);
-    y += 16;
 
+    const relicBaseY = sectionY + 16;
     if (relicEntries.length === 0) {
       contentContainer.add(
-        this.scene.add.text(8, y, 'none yet', {
+        this.scene.add.text(8, relicBaseY, 'none yet', {
           fontSize: '9px', color: '#2a2a4a', fontFamily: 'monospace',
         }),
       );
     } else {
-      for (const id of relicEntries) {
+      relicEntries.forEach((id, index) => {
         const def = ALL_RELICS.find(r => r.id === id);
         const name = def ? def.name : id;
-        contentContainer.add(
-          this.scene.add.text(8, y, `◈ ${name}`, {
-            fontSize: '9px', color: '#ffd700', fontFamily: 'monospace',
-          }),
-        );
-        y += this.LINE_H;
-      }
+        const col = Math.floor(index / this.MAX_ROWS);
+        const row = index % this.MAX_ROWS;
+        const x = 8 + col * (this.COLUMN_W + this.COLUMN_GAP);
+        const y = relicBaseY + row * this.LINE_H;
+
+        contentContainer.add(this.scene.add.text(x, y, `◈ ${name}`, {
+          fontSize: '9px', color: '#ffd700', fontFamily: 'monospace',
+        }));
+      });
     }
 
-    // Scroll hint if content overflows
-    const overflows = this.totalContentH + 32 > this.MAX_H;
+    const overflows = totalContent > this.MAX_H;
     if (overflows) {
-      const hint = this.scene.add.text(this.PANEL_W / 2, panelH - 12, '↑↓ scroll', {
+      const hint = this.addText(panelW / 2, panelH - 12, '↑↓ scroll', {
         fontSize: '7px', color: '#2a2a4a', fontFamily: 'monospace',
       }).setOrigin(0.5, 1);
       this.container.add(hint);
     }
+  }
+
+  private addText(x: number, y: number, text: string, style: Phaser.Types.GameObjects.Text.TextStyle): Phaser.GameObjects.Text {
+    const t = this.scene.add.text(x, y, text, style);
+    if (typeof (t as any).setResolution === 'function') {
+      (t as any).setResolution(window.devicePixelRatio || 1);
+    }
+    return t;
+  }
+
+  update(): void {
+    if (!this.visible) return;
+    this.updatePosition();
+  }
+
+  private updatePosition(): void {
+    const cam = this.scene.cameras.main;
+    const screenX = this.player.x - cam.worldView.x;
+    const screenY = this.player.y - cam.worldView.y;
+    const desiredX = screenX - this.currentPanelW / 2;
+    const desiredY = screenY + 56;
+    const clampedX = Phaser.Math.Clamp(desiredX, 0, GAME_WIDTH - this.currentPanelW);
+    const clampedY = Phaser.Math.Clamp(desiredY, 0, GAME_HEIGHT - this.currentPanelH - 4);
+    this.container.setPosition(clampedX, clampedY);
   }
 
   // ---------------------------------------------------------------------------
