@@ -28,7 +28,12 @@ export class UpgradeModal {
 
   // ── Open / close ────────────────────────────────────────────────────────────
 
+  private cleanupStaleOverlay(): void {
+    this.root.querySelectorAll('.modal-dim').forEach((dim) => dim.remove());
+  }
+
   private open(upgrades: UpgradeDefinition[], contextLabel: string, _floor: number): void {
+    this.cleanupStaleOverlay();
     this.active = true;
 
     const dim = document.createElement('div');
@@ -52,11 +57,19 @@ export class UpgradeModal {
 
   private close(): void {
     this.active = false;
-    const dim = this.root.querySelector('.modal-dim');
-    if (dim) {
-      dim.classList.remove('is-visible');
-      dim.addEventListener('transitionend', () => dim.remove(), { once: true });
-    }
+    const dim = this.root.querySelector('.modal-dim') as HTMLElement | null;
+    if (!dim) return;
+
+    dim.classList.remove('is-visible');
+    dim.style.pointerEvents = 'none';
+
+    const removeDim = () => {
+      if (dim.parentElement) dim.remove();
+      clearTimeout(timeout);
+    };
+
+    const timeout = window.setTimeout(removeDim, 300);
+    dim.addEventListener('transitionend', removeDim, { once: true });
   }
 
   // ── Layout ──────────────────────────────────────────────────────────────────
@@ -148,8 +161,8 @@ export class UpgradeModal {
       if (!this.active) return;
       card.classList.add('is-selected');
       setTimeout(() => {
-        bus.emit({ type: 'upgrade:selected', payload: { upgradeId: upg.id } });
         this.close();
+        bus.emit({ type: 'upgrade:selected', payload: { upgradeId: upg.id } });
       }, 100);
     });
 
@@ -162,8 +175,8 @@ export class UpgradeModal {
     skip.textContent = 'SKIP';
     skip.addEventListener('click', () => {
       if (!this.active) return;
-      bus.emit({ type: 'upgrade:skipped', payload: {} });
       this.close();
+      bus.emit({ type: 'upgrade:skipped', payload: {} });
     });
     return skip;
   }

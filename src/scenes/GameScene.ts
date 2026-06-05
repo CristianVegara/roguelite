@@ -64,6 +64,7 @@ export class GameScene extends Phaser.Scene {
   // Pending flags set by XP events; consumed in onFloorClear
   private pendingLevelUpUpgrade = false;
   private pendingBossUpgrade    = false;
+  private preRunUpgradePicksRemaining = 0;
   private currentClass: ClassDefinition | null = null;
   private monsterSheet: MonsterSheetKey = 'monster_sheet_1';
   private runStartTime     = 0;   // Date.now() at run start, for duration tracking
@@ -112,7 +113,7 @@ export class GameScene extends Phaser.Scene {
     this.pendingBossUpgrade    = false;
     this._runWon               = false;
 
-    const cfg = getRunConfig();
+    const cfg = cfg0;
     this.currentClass = findClass(cfg.classId);
     this.drawBackground();
     this.createEntities();
@@ -131,7 +132,15 @@ export class GameScene extends Phaser.Scene {
     this.statsPanel  = new StatsPanel(this, this.player.stats, this.engine);
     this.buildPanel  = new BuildPanel(this, this.owned, this.ownedRelics);
     void this.buildPanel;   // panel is self-managing via B key binding
-    this.engine.onFloorStart(this.floorManager.currentModifier);
+
+    if (cfg0.modeId === 'one_hp' || cfg0.modeId === 'boss_rush') {
+      this.state = 'special_floor';
+      this.preRunUpgradePicksRemaining = 5;
+      this.launchPreRunUpgradeSequence();
+    } else {
+      this.engine.onFloorStart(this.floorManager.currentModifier);
+    }
+
     this.runStartTime = Date.now();
 
     // ── Floater scale compensation for CSS-scaled canvas on mobile ──────────────
@@ -545,15 +554,19 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  private launchUpgradeScreen(): void {
+  private launchUpgradeScreen(
+    afterChoiceCallback?: (upgraded: boolean) => void,
+    forcedContextLabel?: string,
+  ): void {
     const classWeights = this.currentClass?.categoryWeights;
     const isBossReward = this.enemy?.isBoss ?? false;
     const level        = this.xpManager.currentLevel;
-    const contextLabel = isBossReward
-      ? '⚔  Boss Reward'
-      : level > 0
-        ? `★  Level ${level} — Choose an Upgrade`
-        : `Floor ${this.floorManager.currentFloor} cleared`;
+    const contextLabel = forcedContextLabel
+      ?? (isBossReward
+        ? '⚔  Boss Reward'
+        : level > 0
+          ? `★  Level ${level} — Choose an Upgrade`
+          : `Floor ${this.floorManager.currentFloor} cleared`);
 
     // On the first level-up guarantee at least one card from the class's primary category
     const primaryCategory: string | undefined = classWeights
@@ -582,6 +595,10 @@ export class GameScene extends Phaser.Scene {
         this.player.stats.hp    = Math.min(this.player.stats.hp + 5, this.player.stats.maxHp);
       }
       this.scene.resume();
+      if (afterChoiceCallback) {
+        afterChoiceCallback(upgraded);
+        return;
+      }
       const { rules } = getRunConfig();
       if (rules.bossesOnly) {
         this.launchRelicScreen();
@@ -605,6 +622,27 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.scene.pause();
+  }
+
+  private launchPreRunUpgradeSequence(): void {
+    const nextPick = (): void => {
+      if (this.preRunUpgradePicksRemaining <= 0) {
+        this.engine.onFloorStart(this.floorManager.currentModifier);
+        this.state = 'fighting';
+        this.syncRunState();
+        return;
+      }
+
+      const pickIndex = 6 - this.preRunUpgradePicksRemaining;
+      const contextLabel = `PRE-RUN UPGRADE ${pickIndex} of 5`;
+
+      this.launchUpgradeScreen(() => {
+        this.preRunUpgradePicksRemaining -= 1;
+        nextPick();
+      }, contextLabel);
+    };
+
+    nextPick();
   }
 
   private launchRelicScreen(): void {
