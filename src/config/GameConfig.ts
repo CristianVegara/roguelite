@@ -23,5 +23,10 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
     // CENTER_BOTH injects inline margins that conflict with flex layout,
     // causing the canvas to shift right on mount.
     autoCenter: Phaser.Scale.NO_CENTER,
+    zoom:       Math.max(window.devicePixelRatio, 1),
+  },
+  render: {
+    antialias: true,
+    antialiasGL: true,
   },
 };
