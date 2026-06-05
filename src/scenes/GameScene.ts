@@ -31,8 +31,8 @@ const COMBAT_Y = 350;
 // ── Layout zones ─────────────────────────────────────────────────────────────
 const HEADER_H     = 44;   // top bar (floor label, class badge, speed buttons)
 const MOD_STRIP_Y  = HEADER_H;
-const MOD_STRIP_H  = 22;
-const HP_PANEL_Y   = MOD_STRIP_Y + MOD_STRIP_H;   // 66
+const MOD_STRIP_H  = 0;    // modifier is now a floating pill — no reserved row
+const HP_PANEL_Y   = MOD_STRIP_Y + MOD_STRIP_H;   // 44
 const HP_PANEL_H   = 58;
 const BOT_BAR_Y    = GAME_HEIGHT - 52;             // bottom info bar top edge (588)
 
@@ -53,6 +53,12 @@ export class GameScene extends Phaser.Scene {
   /** Set to true only when the player achieves a deliberate win (e.g. Classic floor cap).
    *  Kept false on all deaths so onPlayerDead() never mis-reports a win. */
   private _runWon = false;
+  /**
+   * Inverse of the CSS scale applied by Scale.FIT.
+   * On a 390 px phone displayScale ≈ 0.81 → floaterScale ≈ 1.23.
+   * Clamped to [1, 1.5]: desktop is unchanged, extreme phones don't get huge numbers.
+   */
+  private floaterScale = 1;
 
   // Pending flags set by XP events; consumed in onFloorClear
   private pendingLevelUpUpgrade = false;
@@ -118,6 +124,13 @@ export class GameScene extends Phaser.Scene {
     void this.buildPanel;   // panel is self-managing via B key binding
     this.engine.onFloorStart(this.floorManager.currentModifier);
     this.runStartTime = Date.now();
+
+    // ── Floater scale compensation for CSS-scaled canvas on mobile ──────────────
+    // Scale.FIT shrinks the canvas CSS size on narrow phones; floater font sizes
+    // are in canvas pixels, so they appear tiny after CSS scaling. We boost them
+    // by the inverse of the display scale, clamped so desktop is unaffected.
+    const ds = this.scale.displayScale.x;  // CSS scale factor (≈0.81 on 390 px phone)
+    this.floaterScale = Math.min(1.5, Math.max(1, 1 / ds));
 
     // ── Hit counter label (shown above player when proc-every-N talents active) ─
     this.hitCounterLabel = this.add
@@ -1269,13 +1282,16 @@ export class GameScene extends Phaser.Scene {
     const { color, size } = cfg[type];
     const prefix = (type === 'heal' || type === 'gold' || type === 'shield') ? '+' : '';
 
+    // Scale font up on mobile (compensates for CSS scale-down of the canvas)
+    const scaledSize = `${Math.round(parseInt(size, 10) * this.floaterScale)}px`;
+
     const label = this.add
       .text(
         x + Phaser.Math.Between(-12, 12),
         y,
         `${prefix}${value}`,
         {
-          fontSize: size,
+          fontSize: scaledSize,
           color,
           fontFamily: 'monospace',
           fontStyle:  type === 'crit' ? 'bold' : 'normal',

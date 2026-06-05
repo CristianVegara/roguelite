@@ -418,3 +418,42 @@
   flex-direction: column;
   gap:            var(--space-2);
 }
+
+/* ── Mobile overrides ────────────────────────────────────────────────────── */
+
+@media (max-width: 479px) {
+  /* Mode cards: single-column so each card has room to breathe */
+  .hs-mode-grid { grid-template-columns: 1fr; }
+
+  /* Profile stat grid: 2 columns instead of 4 */
+  .hs-profile-stats { grid-template-columns: 1fr 1fr; }
+
+  /* Tab buttons: taller tap target */
+  .hs-tab-btn {
+    padding:    var(--space-3) 0;
+    min-height: 44px;
+    font-size:  var(--text-label);
+  }
+
+  /* Upgrade buy buttons: taller, wider */
+  .hs-upg-buy {
+    padding:    var(--space-2) var(--space-3);
+    min-height: 36px;
+  }
+
+  /* Mode play button: taller tap target */
+  .hs-mode-play {
+    padding:    var(--space-2) 0;
+    min-height: 40px;
+    font-size:  var(--text-label);
+  }
+
+  /* Keyboard shortcut list is irrelevant on touchscreens */
+  .hs-bind-list { display: none; }
+
+  /* Settings buttons: taller */
+  .hs-settings-btn { min-height: 40px; padding: var(--space-2) var(--space-3); }
+
+  /* Stats / leaderboard button */
+  .hs-stats-btn { min-height: 44px; }
+}

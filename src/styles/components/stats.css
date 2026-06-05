@@ -186,3 +186,20 @@
 /* ── Empty state ────────────────────────────────────────────────────────── */
 
 .st-empty { font-size: var(--text-label); color: var(--text-dim); padding: var(--space-4) 0; }
+
+/* ── Mobile overrides ────────────────────────────────────────────────────── */
+
+@media (max-width: 479px) {
+  /* Career stats: 2 cols instead of 4 — each cell stays readable */
+  .st-stat-grid { grid-template-columns: 1fr 1fr; }
+
+  /* Milestones: single column so the description text has room */
+  .st-milestone-grid { grid-template-columns: 1fr; }
+
+  /* Recent runs: drop date and duration — show class · floor · build only */
+  .st-run-row {
+    grid-template-columns: 72px 40px 1fr;
+  }
+  .st-run-date { display: none; }
+  .st-run-dur  { display: none; }
+}

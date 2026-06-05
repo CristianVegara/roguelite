@@ -113,25 +113,38 @@
   color:        var(--accent-nature);
 }
 
-/* ── Modifier strip ──────────────────────────────────────────────────────── */
+/* ── Modifier pill (replaces the old full-width strip row) ───────────────── */
+/* Floats as a centered badge just below the top bar, overlaying the arena.
+   Occupies no permanent vertical space — when hidden the 22 px gap is gone. */
 
 .hud-mod-strip {
-  position:       absolute;
-  top:            44px; left: 0; right: 0;
-  height:         22px;
-  display:        flex;
-  align-items:    center;
-  padding:        0 var(--space-3);
-  overflow:       hidden;
-  pointer-events: none;
+  position:         absolute;
+  top:              48px;
+  left:             50%;
+  transform:        translateX(-50%);
+  /* auto width — expands to content, capped so it never overflows the frame */
+  width:            auto;
+  max-width:        300px;
+  height:           auto;
+  padding:          2px 10px 2px 8px;
+  display:          flex;
+  align-items:      center;
+  gap:              6px;
+  border-radius:    12px;
+  border:           1px solid rgba(255,255,255,0.10);
+  z-index:          5;        /* sits above HP panels */
+  pointer-events:   none;
+  overflow:         hidden;
 }
 
 .hud-mod-strip.is-hidden { display: none; }
 
+/* Coloured left dot replaces the old full-height accent bar */
 .hud-mod-accent {
-  position: absolute;
-  left: 0; top: 0; bottom: 0;
-  width: 3px;
+  width:         6px;
+  height:        6px;
+  border-radius: 50%;
+  flex-shrink:   0;
 }
 
 .hud-mod-name {
@@ -140,8 +153,6 @@
   font-weight:    var(--weight-label);
   letter-spacing: var(--ls-caption);
   white-space:    nowrap;
-  min-width:      126px;
-  margin-left:    var(--space-1);
 }
 
 .hud-mod-desc {
@@ -151,13 +162,14 @@
   white-space:   nowrap;
   overflow:      hidden;
   text-overflow: ellipsis;
+  max-width:     140px;
 }
 
 /* ── HP panels ───────────────────────────────────────────────────────────── */
 
 .hud-hp-panel {
   position:         absolute;
-  top:              66px;
+  top:              44px;   /* flush with header — modifier is now a floating pill */
   height:           58px;
   width:            232px;
   background-color: var(--bg-surface);

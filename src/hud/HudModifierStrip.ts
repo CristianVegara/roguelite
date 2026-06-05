@@ -62,14 +62,15 @@ export class HudModifierStrip {
     }
     this.el.classList.remove('is-hidden');
 
-    // Colour comes from the Phaser modifier colour — we approximate with accent-primary
-    // for now; when modifiers expose a colour token this can be refined.
     const colour = '#ffd700';
-    this.el.style.background  = hexWithAlpha(colour, 0.07);
+    // Pill background: subtle tint of the modifier colour
+    this.el.style.background     = hexWithAlpha(colour, 0.10);
+    this.el.style.borderColor    = hexWithAlpha(colour, 0.30);
+    // Accent dot (replaces old full-height stripe)
     this.accent.style.background = colour;
-    this.name.textContent  = s.modifierName;
-    this.name.style.color  = colour;
-    this.desc.textContent  = s.modifierDesc;
+    this.name.textContent        = s.modifierName;
+    this.name.style.color        = colour;
+    this.desc.textContent        = s.modifierDesc;
   }
 }
 
