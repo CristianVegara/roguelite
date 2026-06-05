@@ -108,3 +108,26 @@
   text-align: center;
   margin-top: var(--space-2);
 }
+
+/* ── Mobile overrides ────────────────────────────────────────────────────── */
+
+@media (max-width: 479px) {
+  /* 48px padding on all sides is too tight on a 375px phone — reduce to 24px */
+  .ne-screen {
+    padding: var(--space-5);  /* 24px */
+  }
+
+  /* Input: guarantee a 44px tap/focus target height */
+  .ne-input {
+    min-height: 48px;
+    font-size:  var(--text-heading);  /* keep readable */
+  }
+
+  /* Begin button: taller, full-width for easy tapping */
+  .ne-begin-btn {
+    width:      100%;
+    min-height: 48px;
+    padding:    var(--space-3) var(--space-4);
+    font-size:  var(--text-body);
+  }
+}

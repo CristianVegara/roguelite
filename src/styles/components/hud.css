@@ -119,7 +119,7 @@
 
 .hud-mod-strip {
   position:         absolute;
-  top:              48px;
+  top:              108px;   /* HP panels end at 44+58=102px; 6px gap below */
   left:             50%;
   transform:        translateX(-50%);
   /* auto width — expands to content, capped so it never overflows the frame */
