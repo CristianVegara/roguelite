@@ -73,6 +73,31 @@ export class BuildPanel {
         this.rebuild();
       },
     );
+
+    // Touch drag scroll — tracks a single pointer drag over the panel area
+    let dragStartY    = 0;
+    let dragStartOff  = 0;
+    let isDragging    = false;
+
+    this.scene.input.on('pointerdown', (ptr: Phaser.Input.Pointer) => {
+      if (!this.visible) return;
+      // Only respond to touches/clicks inside the panel bounding box
+      if (ptr.x < this.PANEL_X || ptr.x > this.PANEL_X + this.PANEL_W) return;
+      if (ptr.y < this.PANEL_Y || ptr.y > this.PANEL_Y + this.MAX_H)   return;
+      isDragging    = true;
+      dragStartY    = ptr.y;
+      dragStartOff  = this.scrollOffset;
+    });
+
+    this.scene.input.on('pointermove', (ptr: Phaser.Input.Pointer) => {
+      if (!isDragging || !this.visible) return;
+      const delta    = dragStartY - ptr.y;
+      const maxScroll = Math.max(0, this.totalContentH - this.MAX_H + 16);
+      this.scrollOffset = Phaser.Math.Clamp(dragStartOff + delta, 0, maxScroll);
+      this.rebuild();
+    });
+
+    this.scene.input.on('pointerup', () => { isDragging = false; });
   }
 
   // ---------------------------------------------------------------------------

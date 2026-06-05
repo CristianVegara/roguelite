@@ -234,6 +234,7 @@
 
   --z-base:    1;   /* Normal content flow */
   --z-raised:  10;  /* Cards, hover effects */
+  --z-mobile:  15;  /* Mobile dead-zone chrome panels */
   --z-hud:     20;  /* HUD overlay during combat */
   --z-panel:   30;  /* Slide-in panels */
   --z-modal:   40;  /* Full-screen modals */

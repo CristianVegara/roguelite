@@ -389,3 +389,219 @@
   font-family: var(--font-mono);
   color:       var(--text-dim);
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MOBILE DEAD-ZONE CHROME PANELS
+   Shown only when the 480×640 canvas leaves vertical letterbox space
+   (narrow phones). Heights are set dynamically by MobileChrome.ts.
+   Both panels use position:fixed so they anchor to the real viewport,
+   not to #app, and are immune to canvas scaling.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+#mobile-top-bar,
+#mobile-bottom-bar {
+  position:         fixed;
+  left:             0;
+  right:            0;
+  z-index:          var(--z-mobile);
+  background-color: var(--bg-surface);
+  display:          none;           /* MobileChrome shows them via .is-active  */
+  flex-direction:   column;
+  justify-content:  center;
+  gap:              4px;
+  padding:          0 12px;
+  overflow:         hidden;
+  pointer-events:   none;           /* panels themselves pass through; children opt-in */
+}
+
+#mobile-top-bar {
+  top:             0;
+  border-bottom:   1px solid var(--border-subtle);
+  /* Reserve space for device notch / status bar */
+  padding-top:     env(safe-area-inset-top, 0px);
+}
+
+#mobile-bottom-bar {
+  bottom:          0;
+  border-top:      1px solid var(--border-subtle);
+  /* Reserve space for iOS home indicator */
+  padding-bottom:  env(safe-area-inset-bottom, 0px);
+}
+
+#mobile-top-bar.is-active,
+#mobile-bottom-bar.is-active {
+  display: flex;
+}
+
+/* ── Top bar rows ─────────────────────────────────────────────────────────── */
+
+.mob-info-row {
+  display:     flex;
+  align-items: center;
+  gap:         8px;
+  min-height:  0;
+}
+
+.mob-floor {
+  font-family:    var(--font-mono);
+  font-size:      13px;
+  font-weight:    var(--weight-title);
+  color:          var(--text-primary);
+  white-space:    nowrap;
+  min-width:      56px;
+}
+
+/* Compact HP widget used for both player and enemy in top bar */
+.mob-hp-widget {
+  display:     flex;
+  align-items: center;
+  gap:         5px;
+  flex:        1;
+  min-width:   0;
+}
+
+.mob-hp-label {
+  font-family:  var(--font-mono);
+  font-size:    10px;
+  color:        var(--text-dim);
+  white-space:  nowrap;
+  min-width:    36px;
+}
+
+.mob-hp-track {
+  flex:             1;
+  height:           6px;
+  background-color: var(--bg-void);
+  border-radius:    var(--radius-sm);
+  overflow:         hidden;
+  min-width:        30px;
+}
+
+.mob-hp-fill {
+  height:        100%;
+  border-radius: var(--radius-sm);
+  transition:    width 80ms linear, background-color var(--transition-normal);
+}
+
+.mob-hp-value {
+  font-family:          var(--font-mono);
+  font-size:            10px;
+  color:                var(--text-muted);
+  white-space:          nowrap;
+  font-variant-numeric: tabular-nums;
+  min-width:            52px;
+  text-align:           right;
+}
+
+.mob-modifier-pill {
+  font-family:      var(--font-mono);
+  font-size:        10px;
+  color:            var(--text-secondary);
+  background-color: var(--bg-raised);
+  border:           1px solid var(--border-subtle);
+  border-radius:    var(--radius-sm);
+  padding:          1px 6px;
+  white-space:      nowrap;
+  overflow:         hidden;
+  text-overflow:    ellipsis;
+  max-width:        100%;
+}
+
+/* ── Bottom bar rows ──────────────────────────────────────────────────────── */
+
+.mob-meta-row {
+  display:     flex;
+  align-items: center;
+  gap:         8px;
+  min-height:  0;
+}
+
+.mob-gold {
+  font-family:  var(--font-mono);
+  font-size:    12px;
+  color:        var(--accent-gold);
+  font-weight:  var(--weight-label);
+  white-space:  nowrap;
+}
+
+.mob-xp-track {
+  flex:             1;
+  height:           5px;
+  background-color: var(--bg-void);
+  border-radius:    var(--radius-sm);
+  overflow:         hidden;
+}
+
+.mob-xp-fill {
+  height:        100%;
+  border-radius: var(--radius-sm);
+  background:    var(--accent-lightning);
+  transition:    width var(--transition-fast) linear;
+}
+
+.mob-level {
+  font-family:  var(--font-mono);
+  font-size:    11px;
+  color:        var(--text-dim);
+  white-space:  nowrap;
+}
+
+.mob-action-row {
+  display:     flex;
+  align-items: center;
+  gap:         6px;
+  min-height:  0;
+  pointer-events: auto;
+}
+
+/* Speed toggle buttons — full-size tap targets in real pixels */
+.mob-speed-btn {
+  flex:            1;
+  height:          36px;
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  font-family:     var(--font-mono);
+  font-size:       13px;
+  font-weight:     var(--weight-label);
+  border-radius:   var(--radius-sm);
+  border:          1px solid var(--border-subtle);
+  background:      var(--bg-void);
+  color:           var(--text-dim);
+  cursor:          pointer;
+  user-select:     none;
+  transition:      background var(--transition-fast),
+                   border-color var(--transition-fast),
+                   color var(--transition-fast);
+}
+
+.mob-speed-btn.is-active {
+  background:   rgba(57,153,106,0.18);
+  border-color: var(--border-success);
+  color:        var(--accent-nature);
+}
+
+/* Icon action buttons — pause / build / stats */
+.mob-icon-btn {
+  width:           44px;
+  height:          36px;
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  font-family:     var(--font-mono);
+  font-size:       11px;
+  font-weight:     var(--weight-label);
+  border-radius:   var(--radius-sm);
+  border:          1px solid var(--border-subtle);
+  background:      var(--bg-void);
+  color:           var(--text-dim);
+  cursor:          pointer;
+  user-select:     none;
+  white-space:     nowrap;
+  transition:      background var(--transition-fast), color var(--transition-fast);
+}
+
+.mob-icon-btn:active {
+  background: var(--bg-raised);
+  color:      var(--text-primary);
+}

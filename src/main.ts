@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { gameConfig }      from './config/GameConfig';
 import { router }          from './router/Router';
 import { CombatHUD }       from './hud/CombatHUD';
+import { MobileChrome }   from './hud/MobileChrome';
 import { UpgradeModal }    from './modals/UpgradeModal';
 import { RelicModal }      from './modals/RelicModal';
 import { MerchantModal }   from './modals/MerchantModal';
@@ -35,6 +36,8 @@ router.register('name-entry',   ()       => createNameEntryScreen());
 
 // ── HTML HUD — self-managing, subscribes to RunStateStore ────────────────────
 new CombatHUD();
+// ── Mobile dead-zone chrome — only activates on narrow viewports ─────────────
+new MobileChrome();
 
 // ── HTML Modals — self-managing, listen to GameEventBus ──────────────────────
 new UpgradeModal();

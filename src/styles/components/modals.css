@@ -714,3 +714,46 @@
   color:       var(--text-muted);
   line-height: var(--lh-body);
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MOBILE RESPONSIVE OVERRIDES
+   Below 480 px viewport width the upgrade modal switches to a single-column
+   card layout so each card is full-width and easily tappable.
+   The modal itself drops its fixed width so it uses the viewport naturally.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 479px) {
+  .upgrade-modal {
+    width:   100%;
+    padding: var(--space-3) var(--space-3) var(--space-4);
+    gap:     var(--space-3);
+  }
+
+  /* Single-column card stack */
+  .um-card-row {
+    grid-template-columns: 1fr;
+    gap:                   var(--space-3);
+  }
+
+  /* Cards don't need a min-height in single-column — let content drive height */
+  .um-card {
+    min-height: unset;
+    padding:    var(--space-3) var(--space-3);
+  }
+
+  /* Larger card name and description so they're readable at full width */
+  .um-card-name {
+    font-size: var(--text-body);
+  }
+
+  .um-card-desc {
+    font-size: var(--text-label);
+  }
+
+  /* Skip button: full-width, taller tap target */
+  .um-skip-btn {
+    width:      100%;
+    padding:    var(--space-2) var(--space-4);
+    font-size:  var(--text-label);
+  }
+}

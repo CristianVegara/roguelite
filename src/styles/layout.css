@@ -205,6 +205,55 @@ input:disabled {
   border:     0;
 }
 
+/* ── Mobile: font-size floor ─────────────────────────────────────────────── */
+/* On narrow phones the HUD frame scales down by ~0.8×, shrinking --text-caption
+   (9px) to ~7px. Override the two smallest tokens to stay legible. */
+
+@media (max-width: 479px) {
+  :root {
+    --text-caption: 0.6875rem;  /* bumped to match --text-label (11px) */
+    --text-label:   0.75rem;    /* bumped to 12px */
+  }
+}
+
+/* ── Landscape orientation advisory ──────────────────────────────────────── */
+/* On phones in landscape the canvas becomes height-constrained and very small.
+   Show a polite advisory instead of a broken layout. Hidden on tablets/desktop
+   (min-width: 640px) where landscape is intentional. */
+
+#landscape-advisory {
+  display:          none;
+  position:         fixed;
+  inset:            0;
+  z-index:          calc(var(--z-toast) + 10);
+  background-color: var(--bg-base);
+  align-items:      center;
+  justify-content:  center;
+  flex-direction:   column;
+  gap:              var(--space-4);
+  color:            var(--text-primary);
+  font-family:      var(--font-mono);
+  text-align:       center;
+  padding:          var(--space-6);
+  pointer-events:   auto;
+}
+
+#landscape-advisory .la-icon {
+  font-size: 2.5rem;
+}
+
+#landscape-advisory .la-text {
+  font-size:      var(--text-body);
+  color:          var(--text-secondary);
+  max-width:      280px;
+  line-height:    1.5;
+}
+
+/* Activate on narrow landscape phones only */
+@media (max-height: 479px) and (orientation: landscape) and (max-width: 900px) {
+  #landscape-advisory { display: flex; }
+}
+
 /* ── Art placeholder zones ───────────────────────────────────────────────── */
 
 .art-placeholder {

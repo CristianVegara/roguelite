@@ -36,6 +36,12 @@
            regardless of which subpath the site is deployed to. -->
       <div id="canvas-bg"></div>
 
+      <!-- Mobile dead-zone panels — shown only on narrow viewports where
+           the 480×640 canvas leaves vertical letterbox space.
+           Heights and visibility are set dynamically by MobileChrome.ts. -->
+      <div id="mobile-top-bar"></div>
+      <div id="mobile-bottom-bar"></div>
+
       <!-- Phaser canvas mount.
            Starts visible so Phaser scenes work during migration.
            Router adds is-hidden only once a real HTML screen is registered
@@ -58,6 +64,13 @@
         <div id="toast-root"></div>
 
       </div><!-- /#ui-layer -->
+
+      <!-- Landscape orientation advisory — shown on phones rotated to landscape.
+           Purely CSS-driven via @media (orientation: landscape) + max-height. -->
+      <div id="landscape-advisory">
+        <div class="la-icon">📱</div>
+        <div class="la-text">Rotate your device to portrait for the best experience.</div>
+      </div>
 
     </div><!-- /#app -->
 
