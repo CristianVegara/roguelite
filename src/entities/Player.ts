@@ -25,14 +25,19 @@ export class Player {
   private readonly baseX: number;
   private attackTimer = 0;
 
-  constructor(scene: Phaser.Scene, x: number, y: number, classSpriteFrame?: number) {
+  constructor(scene: Phaser.Scene, x: number, y: number, classSpriteFrame?: number, skinTextureKey?: string | null) {
     this.scene = scene;
     this.baseX = x;
     this.stats = { ...PLAYER_BASE_STATS };
 
     const classSpriteFrameKey = classSpriteFrame != null ? String(classSpriteFrame) : null;
+    const useSkinSprite = skinTextureKey != null && scene.textures.exists(skinTextureKey);
     const useClassSprite = classSpriteFrameKey != null && scene.textures.exists('class_sprite') && scene.textures.get('class_sprite').has(classSpriteFrameKey);
-    if (useClassSprite) {
+
+    if (useSkinSprite) {
+      this.sprite = scene.add.image(x, y, skinTextureKey);
+      this.sprite.setScale(0.52);
+    } else if (useClassSprite) {
       this.sprite = scene.add.image(x, y, 'class_sprite', classSpriteFrame);
       this.sprite.setScale(0.22);
     } else {

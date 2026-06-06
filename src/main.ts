@@ -10,6 +10,7 @@ import { GameOverModal }   from './modals/GameOverModal';
 import { PauseModal }     from './modals/PauseModal';
 import { createHomeScreen }        from './screens/HomeScreen';
 import { createClassSelectScreen } from './screens/ClassSelectScreen';
+import { createShopScreen }        from './screens/ShopScreen';
 import { createStatsScreen }       from './screens/StatsScreen';
 import { createLeaderboardScreen } from './screens/LeaderboardScreen';
 import { createNameEntryScreen }   from './screens/NameEntryScreen';
@@ -30,6 +31,7 @@ router.init();
 // Register HTML screens with the router (M6+)
 router.register('home',         ()       => createHomeScreen());
 router.register('class-select', (params) => createClassSelectScreen(params));
+router.register('shop',         ()       => createShopScreen());
 router.register('stats',        ()       => createStatsScreen());
 router.register('leaderboard',  ()       => createLeaderboardScreen());
 router.register('name-entry',   ()       => createNameEntryScreen());

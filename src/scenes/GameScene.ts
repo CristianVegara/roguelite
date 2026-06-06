@@ -996,7 +996,10 @@ export class GameScene extends Phaser.Scene {
 
   private createEntities(): void {
     const classFrame = this.currentClass ? SpriteLoader.getClassSpriteFrame(this.currentClass.id) : undefined;
-    this.player = new Player(this, PLAYER_X, COMBAT_Y, classFrame ?? undefined);
+    const skinTextureKey = this.currentClass
+      ? metaService.getEquippedSkinTextureKey(this.currentClass.id)
+      : null;
+    this.player = new Player(this, PLAYER_X, COMBAT_Y, classFrame ?? undefined, skinTextureKey);
 
     // Nightmare: skip permanent upgrade bonuses so meta progression has no effect
     if (!getRunConfig().rules.noMetaBonuses) {

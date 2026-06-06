@@ -103,6 +103,11 @@ class HomeScreen {
       nav.appendChild(btn);
     });
 
+    const shopBtn = el('button', 'hs-tab-btn');
+    shopBtn.textContent = 'SHOP';
+    shopBtn.addEventListener('click', () => router.navigate('shop'));
+    nav.appendChild(shopBtn);
+
     return nav;
   }
 

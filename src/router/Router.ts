@@ -5,6 +5,7 @@
  *   home          → HomeScreen
  *   class-select  → ClassSelectScreen   (params: modeId)
  *   combat        → (no HTML screen — shows Phaser canvas)
+ *   shop          → ShopScreen
  *   leaderboard   → LeaderboardScreen
  *   stats         → StatsScreen
  *   settings      → SettingsScreen
@@ -27,6 +28,7 @@ export type RouteName =
   | 'home'
   | 'class-select'
   | 'combat'
+  | 'shop'
   | 'leaderboard'
   | 'stats'
   | 'settings'
@@ -36,6 +38,7 @@ export interface RouteParams {
   'home':         Record<string, never>;
   'class-select': { modeId: string };
   'combat':       Record<string, never>;
+  'shop':         Record<string, never>;
   'leaderboard':  Record<string, never>;
   'stats':        Record<string, never>;
   'settings':     Record<string, never>;

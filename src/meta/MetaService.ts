@@ -1,4 +1,5 @@
 import { CombatStats } from '../combat/CombatStats';
+import { CLASS_SKINS_BY_ID, getClassSkinById } from '../data/ClassSkins';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -34,6 +35,8 @@ interface SaveData {
   highestFloor: number;
   upgrades: PermanentUpgrades;
   lastRun: LastRunStats | null;
+  unlockedSkinIds: string[];
+  equippedSkinByClass: Record<string, string>;
 }
 
 // ---------------------------------------------------------------------------
@@ -58,7 +61,7 @@ const COST_BASE: Record<UpgradeKey, number> = { damage: 30, hp: 25, attackSpeed:
 const COST_STEP: Record<UpgradeKey, number> = { damage: 30, hp: 25, attackSpeed: 35 };
 
 const SAVE_KEY     = 'tower_roguelite_save';
-const SAVE_VERSION = 2; // bumped: added lastRun field
+const SAVE_VERSION = 3; // bumped: added class skin unlocks/equipment
 
 // ---------------------------------------------------------------------------
 // MetaService
@@ -69,6 +72,8 @@ export class MetaService {
   private _highestFloor = 0;
   private _upgrades: PermanentUpgrades = { damage: 0, hp: 0, attackSpeed: 0 };
   private _lastRun: LastRunStats | null = null;
+  private _unlockedSkinIds: Set<string> = new Set();
+  private _equippedSkinByClass: Record<string, string> = {};
 
   constructor() {
     this.load();
@@ -82,6 +87,8 @@ export class MetaService {
   get highestFloor(): number                  { return this._highestFloor; }
   get upgrades():     Readonly<PermanentUpgrades> { return { ...this._upgrades }; }
   get lastRun():      LastRunStats | null      { return this._lastRun; }
+  get unlockedSkinIds(): string[]              { return [...this._unlockedSkinIds]; }
+  get equippedSkinByClass(): Readonly<Record<string, string>> { return { ...this._equippedSkinByClass }; }
 
   // ---------------------------------------------------------------------------
   // Upgrade shop
@@ -106,6 +113,57 @@ export class MetaService {
     this._upgrades[key]++;
     this.save();
     return true;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Class skin shop
+  // ---------------------------------------------------------------------------
+
+  isSkinUnlocked(skinId: string): boolean {
+    return this._unlockedSkinIds.has(skinId);
+  }
+
+  canPurchaseSkin(skinId: string): boolean {
+    const skin = getClassSkinById(skinId);
+    return Boolean(skin) && !this.isSkinUnlocked(skinId) && this._currency >= skin!.cost;
+  }
+
+  purchaseSkin(skinId: string): boolean {
+    const skin = getClassSkinById(skinId);
+    if (!skin || this.isSkinUnlocked(skinId) || this._currency < skin.cost) return false;
+
+    this._currency -= skin.cost;
+    this._unlockedSkinIds.add(skinId);
+    this._equippedSkinByClass[skin.classId] = skinId;
+    this.save();
+    return true;
+  }
+
+  equipSkin(classId: string, skinId: string | null): boolean {
+    if (skinId === null) {
+      delete this._equippedSkinByClass[classId];
+      this.save();
+      return true;
+    }
+
+    const skin = getClassSkinById(skinId);
+    if (!skin || skin.classId !== classId || !this.isSkinUnlocked(skinId)) return false;
+
+    this._equippedSkinByClass[classId] = skinId;
+    this.save();
+    return true;
+  }
+
+  getEquippedSkinId(classId: string): string | null {
+    const skinId = this._equippedSkinByClass[classId] ?? null;
+    const skin = getClassSkinById(skinId);
+    if (!skin || skin.classId !== classId || !this.isSkinUnlocked(skin.id)) return null;
+    return skin.id;
+  }
+
+  getEquippedSkinTextureKey(classId: string): string | null {
+    const skin = getClassSkinById(this.getEquippedSkinId(classId));
+    return skin?.textureKey ?? null;
   }
 
   // ---------------------------------------------------------------------------
@@ -153,6 +211,8 @@ export class MetaService {
       highestFloor: this._highestFloor,
       upgrades:     { ...this._upgrades },
       lastRun:      this._lastRun,
+      unlockedSkinIds: [...this._unlockedSkinIds],
+      equippedSkinByClass: { ...this._equippedSkinByClass },
     };
     try {
       localStorage.setItem(SAVE_KEY, JSON.stringify(data));
@@ -168,7 +228,7 @@ export class MetaService {
 
       const data = JSON.parse(raw) as Partial<SaveData>;
 
-      if (data.version !== SAVE_VERSION) {
+      if (data.version !== 2 && data.version !== SAVE_VERSION) {
         console.warn('[MetaService] save version mismatch — starting fresh.');
         return;
       }
@@ -181,6 +241,10 @@ export class MetaService {
         attackSpeed: clampLevel(data.upgrades?.attackSpeed),
       };
       this._lastRun = data.lastRun ?? null;
+      this._unlockedSkinIds = new Set(
+        (data.unlockedSkinIds ?? []).filter((skinId) => CLASS_SKINS_BY_ID.has(skinId)),
+      );
+      this._equippedSkinByClass = sanitizeEquippedSkins(data.equippedSkinByClass, this._unlockedSkinIds);
     } catch (e) {
       console.warn('[MetaService] load failed — starting fresh:', e);
     }
@@ -191,6 +255,8 @@ export class MetaService {
     this._highestFloor = 0;
     this._upgrades     = { damage: 0, hp: 0, attackSpeed: 0 };
     this._lastRun      = null;
+    this._unlockedSkinIds = new Set();
+    this._equippedSkinByClass = {};
     try { localStorage.removeItem(SAVE_KEY); } catch { /* ignore */ }
   }
 }
@@ -201,6 +267,20 @@ export class MetaService {
 
 function clampLevel(v: number | undefined): number {
   return Math.min(META_MAX_LEVEL, Math.max(0, Math.floor(v ?? 0)));
+}
+
+function sanitizeEquippedSkins(
+  equippedSkinByClass: Record<string, string> | undefined,
+  unlockedSkinIds: Set<string>,
+): Record<string, string> {
+  const sanitized: Record<string, string> = {};
+  Object.entries(equippedSkinByClass ?? {}).forEach(([classId, skinId]) => {
+    const skin = getClassSkinById(skinId);
+    if (skin && skin.classId === classId && unlockedSkinIds.has(skinId)) {
+      sanitized[classId] = skinId;
+    }
+  });
+  return sanitized;
 }
 
 export const metaService = new MetaService();

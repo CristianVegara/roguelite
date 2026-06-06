@@ -1,5 +1,6 @@
 import type Phaser from 'phaser';
 
+import { CLASS_SKINS } from '../data/ClassSkins';
 import classSpriteUrl from '../assets/sprites/class_sprite.png?url';
 import bossSheetUrl from '../assets/sprites/boss_sheet.png?url';
 
@@ -118,6 +119,11 @@ export function preloadSpriteSheets(scene: Phaser.Scene): void {
     const textureKey = filePath.split('/').pop()!.replace('.png', '');
     const url = typeof moduleUrl === 'string' ? moduleUrl : (moduleUrl as { default?: string }).default ?? String(moduleUrl);
     scene.load.image(textureKey, url);
+  }
+
+  // Class skin images
+  for (const skin of CLASS_SKINS) {
+    scene.load.image(skin.textureKey, skin.url);
   }
 
   scene.load.on('loaderror', (file: any) => {
