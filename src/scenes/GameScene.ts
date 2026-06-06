@@ -1323,51 +1323,61 @@ export class GameScene extends Phaser.Scene {
   // Floating damage numbers
   // ---------------------------------------------------------------------------
 
-  private spawnFloater(x: number, y: number, value: number, type: FloaterType): void {
-    if (value <= 0) return;
+ private spawnFloater(x: number, y: number, value: number, type: FloaterType): void {
+  if (value <= 0) return;
 
-    const cfg: Record<FloaterType, { color: string; size: string }> = {
-      damage:    { color: '#ffffff', size: '14px' },
-      crit:      { color: '#FFD700', size: '22px' },   // crits are visually distinct: larger + gold
-      heal:      { color: '#2ecc71', size: '14px' },
-      poison:    { color: '#9b59b6', size: '12px' },
-      burn:      { color: '#e67e22', size: '12px' },
-      lightning: { color: '#3498db', size: '14px' },
-      area:      { color: '#bdc3c7', size: '11px' },
-      reflect:   { color: '#95a5a6', size: '11px' },
-      summon:    { color: '#4fc3f7', size: '12px' },
-      gold:      { color: '#ffd700', size: '13px' },
-      shield:    { color: '#5dade2', size: '13px' },
-    };
+  const cfg: Record<FloaterType, { color: string; size: string }> = {
+    damage:    { color: '#ffffff', size: '14px' },
+    crit:      { color: '#FFD700', size: '22px' },
+    heal:      { color: '#2ecc71', size: '14px' },
+    poison:    { color: '#9b59b6', size: '12px' },
+    burn:      { color: '#e67e22', size: '12px' },
+    lightning: { color: '#3498db', size: '14px' },
+    area:      { color: '#bdc3c7', size: '11px' },
+    reflect:   { color: '#95a5a6', size: '11px' },
+    summon:    { color: '#4fc3f7', size: '12px' },
+    gold:      { color: '#ffd700', size: '13px' },
+    shield:    { color: '#5dade2', size: '13px' },
+  };
 
-    const { color, size } = cfg[type];
-    const prefix = (type === 'heal' || type === 'gold' || type === 'shield') ? '+' : '';
+  const { color, size } = cfg[type];
+  const prefix = (type === 'heal' || type === 'gold' || type === 'shield') ? '+' : '';
 
-    // Scale font up on mobile (compensates for CSS scale-down of the canvas)
-    const scaledSize = `${Math.round(parseInt(size, 10) * this.floaterScale)}px`;
+  // Spawn in a controlled box above the original position
+  const SPAWN_X = 25;
+  const SPAWN_Y = 10;
 
-    const label = this.add
-      .text(
-        x + Phaser.Math.Between(-12, 12),
-        y,
-        `${prefix}${value}`,
-        {
-          fontSize: scaledSize,
-          color,
-          fontFamily: 'monospace',
-          fontStyle:  type === 'crit' ? 'bold' : 'normal',
-          stroke: '#000000',
-          strokeThickness: 3,
-        },
-      )
-      .setOrigin(0.5);
+  const spawnX = x + Phaser.Math.Between(-SPAWN_X, SPAWN_X);
+  const spawnY = y - Phaser.Math.Between(0, SPAWN_Y);
 
-    this.tweens.add({
-      targets: label, y: label.y - 50, alpha: 0,
-      duration: 900, ease: 'Power1',
-      onComplete: () => label.destroy(),
-    });
-  }
+  // Scale font up on mobile (compensates for CSS scale-down of the canvas)
+  const scaledSize = `${Math.round(parseInt(size, 10) * this.floaterScale)}px`;
+
+  const label = this.add
+    .text(
+      spawnX,
+      spawnY,
+      `${prefix}${value}`,
+      {
+        fontSize: scaledSize,
+        color,
+        fontFamily: 'monospace',
+        fontStyle: type === 'crit' ? 'bold' : 'normal',
+        stroke: '#000000',
+        strokeThickness: 3,
+      },
+    )
+    .setOrigin(0.5);
+
+  this.tweens.add({
+    targets: label,
+    y: label.y - 50,
+    alpha: 0,
+    duration: 900,
+    ease: 'Power1',
+    onComplete: () => label.destroy(),
+  });
+}
 }
 
 function intToHex(color: number): string {

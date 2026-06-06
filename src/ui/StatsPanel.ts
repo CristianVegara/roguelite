@@ -37,7 +37,7 @@ export class StatsPanel {
   private readonly DEFAULT_Y    = 170;
   private readonly LINE_H       = 18;
   private readonly COLUMN_W     = 106;
-  private readonly COLUMN_GAP   = 8;
+  private readonly COLUMN_GAP   = 18;
 
   private currentPanelW = this.PANEL_W;
   private currentPanelH = 200;
