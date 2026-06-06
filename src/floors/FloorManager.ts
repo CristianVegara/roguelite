@@ -6,7 +6,7 @@ import { FloorModifier, rollFloorModifier, buildSpecialEnemyStats } from './Floo
  * Defined here so FloorManager owns the full config without importing from entities.
  */
 export interface EnemySpriteConfig {
-  sheet: string;
+  textureKey: string;
   frame?: number;
 }
 
@@ -35,8 +35,8 @@ export interface FloorManagerOptions {
   enemyDamageMultiplier?:  number;
   /** Nightmare: multiply enemy attack speed by this factor. */
   enemySpeedMultiplier?:   number;
-  /** Determines which monster sprite sheet to use for regular enemies. */
-  monsterSheet?:           'monster_sheet_1' | 'monster_sheet_2' | 'monster_sheet_3';
+  /** Optional callback to choose a random monster cell texture key for regular enemies. */
+  getRandomMonsterCellKey?: () => string;
   /** Optional callback to choose a random boss cell texture key for the first boss floor. */
   getRandomBossCellKey?:  () => string;
 }
@@ -71,7 +71,7 @@ export class FloorManager {
   private readonly _enemyDamageMultiplier:   number;
   private readonly _enemySpeedMultiplier:    number;
 
-  private readonly _monsterSheet: 'monster_sheet_1' | 'monster_sheet_2' | 'monster_sheet_3';
+  private readonly _getRandomMonsterCellKey: (() => string) | null;
   private readonly _getRandomBossCellKey: (() => string) | null;
 
   constructor(options: FloorManagerOptions = {}) {
@@ -81,7 +81,7 @@ export class FloorManager {
     this._enemyHpMultiplier     = options.enemyHpMultiplier      ?? 1;
     this._enemyDamageMultiplier = options.enemyDamageMultiplier  ?? 1;
     this._enemySpeedMultiplier  = options.enemySpeedMultiplier   ?? 1;
-    this._monsterSheet          = options.monsterSheet          ?? 'monster_sheet_1';
+    this._getRandomMonsterCellKey = options.getRandomMonsterCellKey ?? null;
     this._getRandomBossCellKey  = options.getRandomBossCellKey   ?? null;
   }
 
@@ -179,8 +179,7 @@ export class FloorManager {
       isBoss: false,
       bossLabel: '',
       sprite: {
-        sheet: this._monsterSheet,
-        frame: (this._currentFloor - 1) % (4 * 4),
+        textureKey: this._getRandomMonsterCellKey?.() ?? 'enemy',
       },
     };
   }
@@ -210,9 +209,9 @@ export class FloorManager {
 
     const isFirstBossFloor = !this._bossesOnly && this._currentFloor === this._bossEveryNFloors;
     const bossSprite = isFirstBossFloor && this._getRandomBossCellKey
-      ? { sheet: this._getRandomBossCellKey() }
+      ? { textureKey: this._getRandomBossCellKey() }
       : {
-          sheet: 'boss_sheet',
+          textureKey: 'boss_sheet',
           frame: this._bossesOnly
             ? Math.floor(Math.random() * (4 * 4))
             : (this._currentFloor - 1) % (4 * 4),

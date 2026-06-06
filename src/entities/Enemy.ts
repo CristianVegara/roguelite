@@ -39,7 +39,7 @@ export class Enemy {
 
     this.attackTimer = -(500 + Math.random() * 300);
 
-    const textureKey = config?.sprite?.sheet ?? (this.isBoss ? 'boss' : 'enemy');
+    const textureKey = config?.sprite?.textureKey ?? (this.isBoss ? 'boss' : 'enemy');
     const frame = config?.sprite?.frame;
     const textureExists = scene.textures.exists(textureKey);
     const frameIsValid = textureExists && frame != null && scene.textures.get(textureKey).has(String(frame));

@@ -14,7 +14,7 @@ import { StatsPanel }  from '../ui/StatsPanel';
 import { BuildPanel }  from '../ui/BuildPanel';
 import { ClassDefinition, findClass } from '../data/ClassDefinition';
 import { getRunConfig } from '../RunConfig';
-import { SpriteLoader, type MonsterSheetKey } from '../sprites/SpriteLoader';
+import { SpriteLoader } from '../sprites/SpriteLoader';
 import { XPManager }    from '../combat/XPManager';
 // ── Bridge ────────────────────────────────────────────────────────────────────
 import { bus }      from '../bridge/GameEventBus';
@@ -66,7 +66,6 @@ export class GameScene extends Phaser.Scene {
   private pendingBossUpgrade    = false;
   private preRunUpgradePicksRemaining = 0;
   private currentClass: ClassDefinition | null = null;
-  private monsterSheet: MonsterSheetKey = 'monster_sheet_1';
   private runStartTime     = 0;   // Date.now() at run start, for duration tracking
   /** Display name of the current enemy — tracked here since Enemy doesn't store it. */
   private currentEnemyName = 'ENEMY';
@@ -93,9 +92,6 @@ export class GameScene extends Phaser.Scene {
   create(): void {
     this.state        = 'fighting';
     const cfg0        = getRunConfig();
-    this.monsterSheet  = cfg0.modeId === 'boss_rush'
-      ? 'monster_sheet_1'
-      : SpriteLoader.chooseRunMonsterSheet();
 
     this.floorManager = new FloorManager({
       bossesOnly:            cfg0.rules.bossesOnly,
@@ -104,7 +100,7 @@ export class GameScene extends Phaser.Scene {
       enemyHpMultiplier:     cfg0.rules.enemyHpMultiplier,
       enemyDamageMultiplier: cfg0.rules.enemyDamageMultiplier,
       enemySpeedMultiplier:  cfg0.rules.enemySpeedMultiplier,
-      monsterSheet:          this.monsterSheet,
+      getRandomMonsterCellKey: SpriteLoader.getRandomMonsterCellKey,
       getRandomBossCellKey:  SpriteLoader.getRandomBossSheetCellKey,
     });
     this.owned               = new Map();
@@ -693,7 +689,7 @@ export class GameScene extends Phaser.Scene {
     const mod    = this.floorManager.currentModifier;
 
     if (rules.bossesOnly) {
-      config.sprite = { sheet: SpriteLoader.getRandomBossSheetCellKey() };
+      config.sprite = { textureKey: SpriteLoader.getRandomBossSheetCellKey() };
     }
 
     this.enemy.destroy();
@@ -1383,4 +1379,3 @@ export class GameScene extends Phaser.Scene {
 function intToHex(color: number): string {
   return `#${color.toString(16).padStart(6, '0')}`;
 }
-
