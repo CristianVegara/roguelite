@@ -10,7 +10,7 @@ export interface ClassSkinDefinition {
   cost: number;
 }
 
-const CLASS_SKIN_COST = 120;
+const CLASS_SKIN_COST = 500;
 const SKIN_FILE_RE = /^[a-z0-9]+(?:_[a-z0-9]+)+\.png$/;
 
 const classSkinModules = import.meta.glob(
