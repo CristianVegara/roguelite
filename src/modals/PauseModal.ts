@@ -1,15 +1,8 @@
 /**
  * PauseModal.ts — In-run pause overlay triggered by the M key.
  *
- * Self-managing: instantiated once from main.ts.
- *
- * Bus protocol:
- *   ← pause:open    Phaser emits when M is pressed → open modal
- *   → pause:resume  user clicks Resume            → Phaser resumes
- *   → pause:restart user clicks Restart Run       → Phaser restarts
- *   → pause:quit    user clicks Quit to Menu      → Phaser quits
- *
- * Mounts in #modal-root.
+ * Mobile fix: emits modal:open / modal:close so CombatHUD and
+ * MobileChrome suppress their pointer-events while the overlay is up.
  */
 
 import { bus } from '../bridge/GameEventBus';
@@ -31,6 +24,7 @@ export class PauseModal {
 
   private open(): void {
     this.active = true;
+    bus.emit({ type: 'modal:open', payload: {} });
 
     const dim = document.createElement('div');
     dim.className = 'modal-dim';
@@ -57,12 +51,13 @@ export class PauseModal {
     };
     document.addEventListener('keydown', onKey);
 
-    // stash cleanup so close() can remove it
     (dim as HTMLElement & { _onKey?: (e: KeyboardEvent) => void })._onKey = onKey;
   }
 
   private close(): void {
     this.active = false;
+    bus.emit({ type: 'modal:close', payload: {} });
+
     const dim = this.root.querySelector('.pause-panel')?.closest('.modal-dim') as
       (HTMLElement & { _onKey?: (e: KeyboardEvent) => void }) | null;
     if (dim) {

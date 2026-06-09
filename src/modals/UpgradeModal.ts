@@ -35,6 +35,7 @@ export class UpgradeModal {
   private open(upgrades: UpgradeDefinition[], contextLabel: string, _floor: number): void {
     this.cleanupStaleOverlay();
     this.active = true;
+    bus.emit({ type: 'modal:open', payload: {} });
 
     const dim = document.createElement('div');
     dim.className = 'modal-dim';
@@ -51,12 +52,13 @@ export class UpgradeModal {
     dim.appendChild(this.panel);
     this.root.appendChild(dim);
 
-    // Fade in
     requestAnimationFrame(() => dim.classList.add('is-visible'));
   }
 
   private close(): void {
     this.active = false;
+    bus.emit({ type: 'modal:close', payload: {} });
+
     const dim = this.root.querySelector('.modal-dim') as HTMLElement | null;
     if (!dim) return;
 
@@ -103,11 +105,10 @@ export class UpgradeModal {
 
     const accentColor = intToHex(upg.color);
     const rarityColor = intToHex(RARITY_COLOR[upg.rarity]);
-    card.style.setProperty('--upg-color',   accentColor);
+    card.style.setProperty('--upg-color',    accentColor);
     card.style.setProperty('--rarity-color', rarityColor);
     card.dataset['rarity'] = upg.rarity;
 
-    // Tier tag (top-left) + rarity badge (top-right)
     const badges = document.createElement('div');
     badges.className = 'um-card-badges';
 
@@ -122,32 +123,26 @@ export class UpgradeModal {
 
     badges.append(tierEl, rarEl);
 
-    // Category
     const catEl = document.createElement('div');
     catEl.className   = 'um-card-cat';
     catEl.textContent = upg.category.toUpperCase();
 
-    // Name
     const nameEl = document.createElement('div');
     nameEl.className   = 'um-card-name';
     nameEl.textContent = upg.name;
 
-    // Divider
     const div = document.createElement('div');
     div.className = 'um-card-divider';
 
-    // Description
     const descEl = document.createElement('div');
     descEl.className   = 'um-card-desc';
     descEl.textContent = upg.description;
 
-    // Flavour
     const flavEl = document.createElement('div');
     flavEl.className   = 'um-card-flavour';
     flavEl.textContent = upg.flavour ? `"${upg.flavour}"` : '';
     flavEl.hidden      = !upg.flavour;
 
-    // Stack note — only for upgrades you can take multiple times
     const stackEl = document.createElement('div');
     stackEl.className = 'um-card-stack';
     stackEl.hidden    = upg.maxStacks <= 1;

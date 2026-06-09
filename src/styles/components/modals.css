@@ -541,15 +541,15 @@
   gap:     var(--space-2);
 }
 .go-btn {
-  flex:         1;
-  padding:      var(--space-2) 0;
-  border-radius: var(--radius-md);
-  font-family:  var(--font-mono);
-  font-size:    var(--text-label);
-  font-weight:  var(--weight-label);
+  flex:           1;
+  padding:        var(--space-2) 0;
+  border-radius:  var(--radius-md);
+  font-family:    var(--font-mono);
+  font-size:      var(--text-label);
+  font-weight:    var(--weight-label);
   letter-spacing: var(--ls-label);
-  cursor:       pointer;
-  transition:   background-color var(--transition-fast), opacity var(--transition-fast);
+  cursor:         pointer;
+  transition:     background-color var(--transition-fast), opacity var(--transition-fast);
 }
 .go-btn-primary {
   background-color: var(--accent-primary);
@@ -568,20 +568,20 @@
 
 .um-skip-btn {
   background:     none;
-  border:         1px solid var(--border-subtle);
+  border:         1px solid var(--border-default);    /* was: border-subtle — too invisible */
   border-radius:  var(--radius-md);
-  color:          var(--text-dim);
+  color:          var(--text-secondary);              /* was: text-dim — too faint to read  */
   font-family:    var(--font-mono);
-  font-size:      var(--text-caption);
+  font-size:      var(--text-label);                  /* was: text-caption — too small       */
   font-weight:    var(--weight-label);
-  padding:        var(--space-1) var(--space-4);
+  padding:        var(--space-2) var(--space-5);      /* was: space-1 space-4 — tap too small */
   cursor:         pointer;
   letter-spacing: var(--ls-label);
   transition:     color var(--transition-fast), border-color var(--transition-fast);
 }
 .um-skip-btn:hover {
-  color:        var(--text-secondary);
-  border-color: var(--border-default);
+  color:        var(--text-primary);                  /* was: text-secondary */
+  border-color: var(--border-highlight);              /* was: border-default */
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -742,19 +742,14 @@
   }
 
   /* Larger card name and description so they're readable at full width */
-  .um-card-name {
-    font-size: var(--text-body);
-  }
+  .um-card-name { font-size: var(--text-body); }
+  .um-card-desc { font-size: var(--text-label); }
 
-  .um-card-desc {
-    font-size: var(--text-label);
-  }
-
-  /* Skip button: full-width, taller tap target */
+  /* Skip button: full-width, taller tap target.
+     font-size is already var(--text-label) from the base rule — no override needed. */
   .um-skip-btn {
-    width:      100%;
-    padding:    var(--space-2) var(--space-4);
-    font-size:  var(--text-label);
+    width:   100%;
+    padding: var(--space-3) var(--space-4);            /* was: space-2 — increase tap target */
   }
 
   /* ── Relic modal ─────────────────────────────────────────────────────────── */
@@ -809,7 +804,7 @@
 
   .pause-panel {
     width:   100%;
-    padding: var(--space-5) var(--space-4);  /* 24px 16px — fits narrow screens */
+    padding: var(--space-5) var(--space-4);
     gap:     var(--space-4);
   }
 

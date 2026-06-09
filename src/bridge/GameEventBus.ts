@@ -82,10 +82,16 @@ export interface BusEvents {
   'hud:toggle-stats': Record<string, never>;
 
   // ── Pause menu ───────────────────────────────────────────────────────────
-  'pause:open':   Record<string, never>;  // Phaser → HTML (M key pressed)
-  'pause:resume': Record<string, never>;  // HTML → Phaser (Resume clicked)
-  'pause:restart': Record<string, never>; // HTML → Phaser (Restart clicked)
-  'pause:quit':   Record<string, never>;  // HTML → Phaser (Quit clicked)
+  'pause:open':    Record<string, never>;  // Phaser → HTML (M key pressed)
+  'pause:resume':  Record<string, never>;  // HTML → Phaser (Resume clicked)
+  'pause:restart': Record<string, never>;  // HTML → Phaser (Restart clicked)
+  'pause:quit':    Record<string, never>;  // HTML → Phaser (Quit clicked)
+
+  // ── Modal visibility (any modal → HUD / MobileChrome) ────────────────────
+  /** Emitted by any modal on open.  HUD + mobile bars disable pointer-events. */
+  'modal:open':  Record<string, never>;
+  /** Emitted by any modal on close. HUD + mobile bars restore pointer-events. */
+  'modal:close': Record<string, never>;
 
   // ── Navigation ────────────────────────────────────────────────────────────
   'run:start-requested': Record<string, never>;  // HTML → Phaser to begin

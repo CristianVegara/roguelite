@@ -1,18 +1,14 @@
 /**
  * MerchantModal.ts — HTML replacement for MerchantScene.
  *
- * More complex than Relic/Upgrade modals:
- *   - Player can buy multiple items before leaving
- *   - Reroll button: escalating cost, replaces offer cards
- *   - Leave button: always visible, emits 'merchant:closed'
- *   - Gold display reads from runState and stays live
- *
- * Bus protocol:
- *   ← merchant:available   open the modal
- *   → merchant:purchase    GameScene deducts gold, applies effect, updates runState
- *   → merchant:closed      GameScene resumes + advances floor
- *
- * Mounts in #modal-root.
+ * Mobile fixes applied:
+ *   1. Emits modal:open / modal:close on the bus so CombatHUD and
+ *      MobileChrome can suppress their pointer-events while the modal
+ *      is visible — preventing the HUD frame and mobile bars from
+ *      silently swallowing taps meant for the modal.
+ *   2. The panel is now a flex column with a capped max-height and a
+ *      scrollable middle section.  Header and "Leave Shop" footer are
+ *      always visible; only the consumables + upgrade cards scroll.
  */
 
 import { bus }      from '../bridge/GameEventBus';
@@ -56,7 +52,6 @@ export class MerchantModal {
 
     bus.on('merchant:available', (e) => {
       if (this.active) return;
-      // Capture offer snapshot from bus; ownedSnapshot is reconstructed from payload
       this.floor       = e.payload.floor;
       this.rerollCount = 0;
       this.rerollCost  = 15;
@@ -69,11 +64,10 @@ export class MerchantModal {
 
   private open(initialOffers: UpgradeDefinition[]): void {
     this.active = true;
+    // ① Disable HUD frame + mobile bar pointer-events immediately.
+    bus.emit({ type: 'modal:open', payload: {} });
 
-    // Snapshot owned upgrades from run state (approximation — track by id)
-    // We use an empty map; the actual owned tracking is in GameScene
     this.ownedSnapshot = new Map();
-
     this.offers = initialOffers.map(upg => ({
       upg,
       cost: this.computeCost(upg),
@@ -86,10 +80,35 @@ export class MerchantModal {
     const panel = document.createElement('div');
     panel.className = 'merchant-modal';
 
-    panel.append(
-      this.buildHeader(),
+    // ② Make the panel a flex column with a hard height cap so it never
+    //    overflows the viewport on small screens.
+    Object.assign(panel.style, {
+      display:       'flex',
+      flexDirection: 'column',
+      // Cap at 90 % of viewport height, hard max 640 px (canvas height).
+      maxHeight:     `${Math.min(Math.round(window.innerHeight * 0.9), 640)}px`,
+      overflow:      'hidden',
+    });
+
+    // ③ Middle section scrolls; header and footer are pinned.
+    const scrollBody = document.createElement('div');
+    Object.assign(scrollBody.style, {
+      flex:               '1',
+      overflowY:          'auto',
+      minHeight:          '0',       // required for flex children to shrink
+      overscrollBehavior: 'contain', // prevent scroll bleed to background
+    });
+    // iOS momentum scrolling (non-standard but harmless on other browsers)
+    (scrollBody.style as unknown as Record<string, string>)['-webkit-overflow-scrolling'] = 'touch';
+
+    scrollBody.append(
       this.buildConsumableRow(),
       this.buildOfferSection(),
+    );
+
+    panel.append(
+      this.buildHeader(),
+      scrollBody,
       this.buildFooter(),
     );
 
@@ -106,6 +125,9 @@ export class MerchantModal {
 
   private close(): void {
     this.active = false;
+    // ④ Re-enable HUD frame + mobile bar pointer-events.
+    bus.emit({ type: 'modal:close', payload: {} });
+
     this.goldSub?.();
     this.goldSub = null;
 
@@ -233,7 +255,7 @@ export class MerchantModal {
     card.className = 'mm-offer-card';
     if (sold) card.classList.add('is-sold');
     if (!canAfford && !sold) card.classList.add('is-cant-afford');
-    card.style.setProperty('--upg-color',   intToHex(upg.color));
+    card.style.setProperty('--upg-color',    intToHex(upg.color));
     card.style.setProperty('--rarity-color', intToHex(RARITY_COLOR[upg.rarity]));
 
     const badges = document.createElement('div');
@@ -296,12 +318,10 @@ export class MerchantModal {
   private refreshAffordability(): void {
     if (!this.offerGrid) return;
     const gold = runState.get().gold;
-    // Re-render offer grid to reflect new gold
     this.offerGrid.innerHTML = '';
     this.offers.forEach((offer, i) => {
       this.offerGrid.appendChild(this.buildOfferCard(offer, i, gold));
     });
-    // Update reroll button
     if (this.rerollBtn) {
       this.rerollBtn.disabled    = gold < this.rerollCost;
       this.rerollBtn.textContent = `REROLL  ${this.rerollCost} ★`;
@@ -325,11 +345,9 @@ export class MerchantModal {
 
       bus.emit({ type: 'merchant:purchase', payload: { itemId: 'reroll', type: 'reroll', cost: this.rerollCost } });
 
-      // Escalate cost and pick new offers
       this.rerollCount++;
       this.rerollCost = Math.min(100, Math.floor(15 * Math.pow(1.5, this.rerollCount)));
 
-      // Pick new upgrades (use same floor and fresh ownedSnapshot)
       const newUpgrades = pickRunUpgrades(3, this.floor, this.ownedSnapshot);
       this.offers = newUpgrades.map(upg => ({
         upg,
