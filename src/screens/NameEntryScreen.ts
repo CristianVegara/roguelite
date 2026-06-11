@@ -3,6 +3,12 @@
  *
  * Registered with the router under 'name-entry'.
  * On submit: ServiceLocator.profile.createProfile(name) → router.navigate('home').
+ *
+ * CHANGES:
+ *   - Added inputmode="text" + enterkeyhint="done" for mobile keyboard UX
+ *   - Added live character counter (N/16) next to hint text
+ *   - Added context-aware subtitle: "rename" vs first-time flow
+ *   - flavour text hidden on rename context
  */
 
 import { ServiceLocator }        from '../services/ServiceLocator';
@@ -13,8 +19,9 @@ import { router }                from '../router/Router';
 // Factory — registered with the router
 // ---------------------------------------------------------------------------
 
-export function createNameEntryScreen(): HTMLElement {
-  return new NameEntryScreen().el;
+export function createNameEntryScreen(params?: Record<string, unknown>): HTMLElement {
+  const isRename = params?.['rename'] === true;
+  return new NameEntryScreen(isRename).el;
 }
 
 // ---------------------------------------------------------------------------
@@ -22,13 +29,15 @@ export function createNameEntryScreen(): HTMLElement {
 // ---------------------------------------------------------------------------
 
 class NameEntryScreen {
-  readonly el:     HTMLElement;
-  private input!:  HTMLInputElement;
+  readonly el:      HTMLElement;
+  private input!:   HTMLInputElement;
   private errorEl!: HTMLElement;
+  private charCountEl!: HTMLElement;
+  private readonly isRename: boolean;
 
-  constructor() {
+  constructor(isRename = false) {
+    this.isRename = isRename;
     this.el = this.build();
-    // Focus the input after mount
     requestAnimationFrame(() => this.input.focus());
   }
 
@@ -38,19 +47,27 @@ class NameEntryScreen {
 
     const title = document.createElement('div');
     title.className   = 'ne-title';
-    title.textContent = 'THE SPIRE AWAITS';
+    title.textContent = this.isRename ? 'CHANGE YOUR NAME' : 'THE SPIRE AWAITS';
 
     const sub = document.createElement('div');
     sub.className   = 'ne-subtitle';
-    sub.textContent = 'What do they call you?';
+    // FIX: context-aware subtitle text
+    sub.textContent = this.isRename
+      ? 'Enter a new display name'
+      : 'What do they call you?';
 
     const form = this.buildForm();
 
-    const flavour = document.createElement('div');
-    flavour.className   = 'ne-flavour';
-    flavour.textContent = '"Every legend started here."';
+    root.append(title, sub, form);
 
-    root.append(title, sub, form, flavour);
+    // FIX: Flavour text only shown on first-time entry, not rename
+    if (!this.isRename) {
+      const flavour = document.createElement('div');
+      flavour.className   = 'ne-flavour';
+      flavour.textContent = '"Every legend started here."';
+      root.appendChild(flavour);
+    }
+
     return root;
   }
 
@@ -65,28 +82,54 @@ class NameEntryScreen {
     this.input.autocomplete = 'off';
     this.input.spellcheck   = false;
     this.input.className    = 'ne-input';
+    // FIX: mobile keyboard shows text input mode and a "Done" action key
+    this.input.setAttribute('inputmode', 'text');
+    this.input.setAttribute('enterkeyhint', 'done');
+    // FIX: autocorrect/autocapitalize off — player names are case-sensitive
+    this.input.setAttribute('autocorrect', 'off');
+    this.input.setAttribute('autocapitalize', 'off');
 
-    this.input.addEventListener('input', () => {
-      this.errorEl.textContent = '';
-      this.input.classList.remove('is-error');
-    });
-    this.input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') this.submit();
-    });
+    // Hint row: hint text + character counter
+    const hintRow = document.createElement('div');
+    hintRow.className = 'ne-hint-row';
 
     const hint = document.createElement('div');
     hint.className   = 'ne-hint';
     hint.textContent = '2–16 characters  ·  letters, numbers, hyphens';
 
+    // FIX: live character counter — shows "N/16" as user types
+    this.charCountEl = document.createElement('div');
+    this.charCountEl.className   = 'ne-char-count';
+    this.charCountEl.textContent = `0/16`;
+
+    hintRow.append(hint, this.charCountEl);
+
     this.errorEl = document.createElement('div');
     this.errorEl.className = 'ne-error';
+    // Reserve the space so error text doesn't cause layout shift
+    this.errorEl.setAttribute('aria-live', 'polite');
 
     const btn = document.createElement('button');
     btn.className   = 'ne-begin-btn';
-    btn.textContent = 'BEGIN';
+    btn.textContent = this.isRename ? 'SAVE' : 'BEGIN';
     btn.addEventListener('click', () => this.submit());
 
-    wrap.append(this.input, hint, this.errorEl, btn);
+    this.input.addEventListener('input', () => {
+      // Clear error on new input
+      this.errorEl.textContent = '';
+      this.input.classList.remove('is-error');
+      // FIX: update character counter
+      const len = this.input.value.length;
+      this.charCountEl.textContent = `${len}/16`;
+      // Visual warning when approaching limit
+      this.charCountEl.classList.toggle('is-near-limit', len >= 14);
+    });
+
+    this.input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') this.submit();
+    });
+
+    wrap.append(this.input, hintRow, this.errorEl, btn);
     return wrap;
   }
 
@@ -98,7 +141,6 @@ class NameEntryScreen {
       this.errorEl.textContent = error;
       this.input.classList.add('is-error');
       this.input.focus();
-      // Shake animation via class toggle
       this.input.classList.add('is-shake');
       setTimeout(() => this.input.classList.remove('is-shake'), 400);
       return;

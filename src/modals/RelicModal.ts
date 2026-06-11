@@ -1,11 +1,8 @@
 /**
  * RelicModal.ts — HTML replacement for RelicScene.
  *
- * Same bus pattern as UpgradeModal.
- * Opens on 'relic:available'. Emits 'relic:selected' or 'relic:skipped'.
- * GameScene applies the relic (has engine + playerStats references).
- *
- * Mounts in #modal-root.
+ * Mobile fix: emits modal:open / modal:close so CombatHUD and
+ * MobileChrome suppress their pointer-events while the overlay is up.
  */
 
 import { bus }          from '../bridge/GameEventBus';
@@ -26,6 +23,7 @@ export class RelicModal {
 
   private open(relics: RelicDefinition[], floor: number): void {
     this.active = true;
+    bus.emit({ type: 'modal:open', payload: {} });
 
     const dim = document.createElement('div');
     dim.className = 'modal-dim';
@@ -46,6 +44,8 @@ export class RelicModal {
 
   private close(): void {
     this.active = false;
+    bus.emit({ type: 'modal:close', payload: {} });
+
     const dim = this.root.querySelector('.modal-dim');
     if (dim) {
       dim.classList.remove('is-visible');
@@ -131,7 +131,7 @@ export class RelicModal {
 
   private buildSkipBtn(): HTMLElement {
     const skip = document.createElement('button');
-    skip.className   = 'um-skip-btn';   // reuse upgrade modal skip style
+    skip.className   = 'um-skip-btn';
     skip.textContent = 'SKIP';
     skip.addEventListener('click', () => {
       if (!this.active) return;

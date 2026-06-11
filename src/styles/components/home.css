@@ -1,7 +1,14 @@
 /**
- * home.css — Styles for HomeScreen (M6).
- * Uses design tokens from tokens.css. No hardcoded colours.
- * M13 will apply a full visual-identity polish pass.
+ * home.css — Styles for HomeScreen.
+ * Uses design tokens from tokens.css.
+ *
+ * CHANGES:
+ *   - .hs-mode-play: always-visible styling (was hover-only — invisible on mobile)
+ *   - .hs-tab-btn: removed SHOP-specific styles (SHOP moves to header)
+ *   - Added .hs-header-shop for the new header-level shop link button
+ *   - Added .hs-last-run--play for the PLAY AGAIN CTA variant
+ *   - Fixed .hs-title-chip.is-active using --text-on-accent (was missing token)
+ *   - Improved .hs-upg-buy tap target consistency
  */
 
 /* ── Root shell ─────────────────────────────────────────────────────────── */
@@ -45,11 +52,38 @@
 }
 .hs-player-name:hover { color: var(--text-primary); }
 
+/* FIX: Right side of header holds currency + shop link as a group */
+.hs-header-right {
+  display:     flex;
+  align-items: center;
+  gap:         var(--space-2);
+}
+
 .hs-currency {
   font-size:            var(--text-body);
   font-weight:          var(--weight-label);
   color:                var(--accent-gold);
   font-variant-numeric: tabular-nums;
+}
+
+/* FIX: SHOP moves from tab nav to header — it's navigation, not a tab.
+   Styled as a small text link to avoid competing with primary header content. */
+.hs-header-shop {
+  padding:        2px var(--space-2);
+  background:     none;
+  border:         1px solid var(--border-subtle);
+  border-radius:  var(--radius-md);
+  color:          var(--text-dim);
+  font-family:    var(--font-mono);
+  font-size:      var(--text-caption);
+  font-weight:    var(--weight-label);
+  letter-spacing: var(--ls-caption);
+  cursor:         pointer;
+  transition:     color var(--transition-fast), border-color var(--transition-fast);
+}
+.hs-header-shop:hover {
+  color:        var(--text-muted);
+  border-color: var(--border-default);
 }
 
 /* ── Tab nav ────────────────────────────────────────────────────────────── */
@@ -61,9 +95,13 @@
   border-bottom:    1px solid var(--border-subtle);
 }
 
+/* FIX: Tab nav now holds only true tabs: PLAY, HISTORY, PROFILE, SETTINGS.
+   4 items × 25% width = comfortable on all phone sizes. */
 .hs-tab-btn {
   flex:             1;
   padding:          var(--space-2) 0;
+  /* FIX: 44px min-height on all viewports for tap target compliance */
+  min-height:       44px;
   background:       none;
   border:           none;
   border-bottom:    2px solid transparent;
@@ -101,6 +139,45 @@
   padding:        var(--space-1) 0;
   margin-top:     var(--space-1);
 }
+
+/* ── Last run / re-engagement card ─────────────────────────────────────── */
+
+.hs-last-run {
+  display:          flex;
+  align-items:      center;
+  gap:              var(--space-3);
+  padding:          var(--space-2) var(--space-3);
+  background-color: var(--bg-raised);
+  border:           1px solid var(--border-subtle);
+  border-radius:    var(--radius-md);
+}
+.hs-last-run-label  { font-size: var(--text-caption); color: var(--text-dim); min-width: 56px; }
+.hs-last-run-floor  { font-size: var(--text-body); font-weight: var(--weight-label); }
+.hs-last-run-detail { font-size: var(--text-caption); color: var(--text-muted); margin-left: auto; }
+
+/* FIX: "PLAY AGAIN" variant of the last run card — top of Play tab, elevated */
+.hs-last-run--reentry {
+  border-color:     var(--border-default);
+  background-color: var(--bg-float);
+  padding:          var(--space-3);
+}
+
+.hs-last-run-play-btn {
+  margin-left:      auto;
+  padding:          var(--space-1) var(--space-3);
+  min-height:       36px;
+  background-color: var(--accent-primary);
+  border:           1px solid var(--accent-primary);
+  border-radius:    var(--radius-md);
+  color:            var(--text-on-accent);
+  font-family:      var(--font-mono);
+  font-size:        var(--text-caption);
+  font-weight:      var(--weight-label);
+  cursor:           pointer;
+  white-space:      nowrap;
+  transition:       background-color var(--transition-fast);
+}
+.hs-last-run-play-btn:hover { background-color: var(--accent-primary-hover); }
 
 /* ── Mode cards grid ────────────────────────────────────────────────────── */
 
@@ -150,10 +227,9 @@
 .hs-mode-play {
   margin-top:       var(--space-1);
   padding:          var(--space-1) 0;
+  min-height:       40px;
   background:       none;
-  border:           1px solid var(--border-default);
   border-radius:    var(--radius-md);
-  color:            var(--text-muted);
   font-family:      var(--font-mono);
   font-size:        var(--text-caption);
   font-weight:      var(--weight-label);
@@ -161,11 +237,13 @@
   cursor:           pointer;
   transition:       color var(--transition-fast), border-color var(--transition-fast),
                     background-color var(--transition-fast);
-}
-.hs-mode-card:hover .hs-mode-play {
+  /* FIX: Always show the mode color — was hover-only, meaning mobile users
+     saw a near-invisible button since hover states don't exist on touch. */
   color:            var(--mode-color, var(--text-primary));
-  border-color:     var(--mode-color, var(--accent-primary));
-  background-color: rgba(255,255,255,0.04);
+  border:           1px solid var(--mode-color, var(--border-default));
+}
+.hs-mode-play:hover {
+  background-color: rgba(255,255,255,0.06);
 }
 
 /* ── Permanent upgrades ─────────────────────────────────────────────────── */
@@ -217,7 +295,9 @@
 }
 
 .hs-upg-buy {
-  padding:          2px var(--space-2);
+  padding:          var(--space-1) var(--space-2);
+  /* FIX: consistent 36px min-height everywhere — was just in mobile override */
+  min-height:       36px;
   background-color: var(--bg-surface);
   border:           1px solid var(--border-subtle);
   border-radius:    var(--radius-md);
@@ -235,21 +315,6 @@
 .hs-upg-buy.can-afford:hover { background-color: rgba(57,153,106,0.12); }
 .hs-upg-buy.is-max  { color: var(--text-dim); cursor: default; }
 .hs-upg-buy:disabled { opacity: 0.5; cursor: default; }
-
-/* ── Last run card ──────────────────────────────────────────────────────── */
-
-.hs-last-run {
-  display:          flex;
-  align-items:      center;
-  gap:              var(--space-3);
-  padding:          var(--space-2) var(--space-3);
-  background-color: var(--bg-raised);
-  border:           1px solid var(--border-subtle);
-  border-radius:    var(--radius-md);
-}
-.hs-last-run-label  { font-size: var(--text-caption); color: var(--text-dim); min-width: 56px; }
-.hs-last-run-floor  { font-size: var(--text-body); font-weight: var(--weight-label); }
-.hs-last-run-detail { font-size: var(--text-caption); color: var(--text-muted); margin-left: auto; }
 
 /* ── Ranks table ────────────────────────────────────────────────────────── */
 
@@ -329,6 +394,9 @@
 }
 .hs-title-chip {
   padding:          2px var(--space-2);
+  min-height:       32px;
+  display:          flex;
+  align-items:      center;
   background-color: rgba(57,153,106,0.08);
   border:           1px solid rgba(57,153,106,0.3);
   border-radius:    var(--radius-full);
@@ -342,8 +410,9 @@
 }
 .hs-title-chip.is-active {
   background-color: var(--accent-glow);
-  border-color: var(--accent-glow);
-  color: var(--text-on-accent);
+  border-color:     var(--accent-glow);
+  /* FIX: --text-on-accent was undefined before; now resolves correctly */
+  color:            var(--text-on-accent);
 }
 .hs-title-hint {
   margin:          var(--space-2) 0 var(--space-1);
@@ -353,6 +422,7 @@
 
 .hs-stats-btn {
   padding:          var(--space-2) var(--space-4);
+  min-height:       44px;
   background:       none;
   border:           1px solid var(--accent-glow);
   border-radius:    var(--radius-lg);
@@ -382,6 +452,7 @@
 .hs-settings-desc        { font-size: var(--text-caption); color: var(--text-muted); }
 .hs-settings-btn {
   padding:        var(--space-1) var(--space-3);
+  min-height:     40px;
   background:     none;
   border:         1px solid var(--accent-lightning);
   border-radius:  var(--radius-md);
@@ -437,38 +508,28 @@
 /* ── Mobile overrides ────────────────────────────────────────────────────── */
 
 @media (max-width: 479px) {
-  /* Mode cards: single-column so each card has room to breathe */
   .hs-mode-grid { grid-template-columns: 1fr; }
 
-  /* Profile stat grid: 2 columns instead of 4 */
   .hs-profile-stats { grid-template-columns: 1fr 1fr; }
 
-  /* Tab buttons: taller tap target */
-  .hs-tab-btn {
-    padding:    var(--space-3) 0;
+  /* FIX: font-size raised; min-height already set on base rule */
+  .hs-tab-btn { font-size: var(--text-label); }
+
+  .hs-mode-play {
     min-height: 44px;
     font-size:  var(--text-label);
   }
 
-  /* Upgrade buy buttons: taller, wider */
-  .hs-upg-buy {
-    padding:    var(--space-2) var(--space-3);
-    min-height: 36px;
-  }
-
-  /* Mode play button: taller tap target */
-  .hs-mode-play {
-    padding:    var(--space-2) 0;
-    min-height: 40px;
-    font-size:  var(--text-label);
-  }
-
-  /* Keyboard shortcut list is irrelevant on touchscreens */
   .hs-bind-list { display: none; }
 
-  /* Settings buttons: taller */
-  .hs-settings-btn { min-height: 40px; padding: var(--space-2) var(--space-3); }
+  .hs-settings-btn { min-height: 44px; padding: var(--space-2) var(--space-3); }
 
-  /* Stats / leaderboard button */
   .hs-stats-btn { min-height: 44px; }
+
+  /* Header shop button: larger tap target on mobile */
+  .hs-header-shop {
+    min-height: 32px;
+    padding:    var(--space-1) var(--space-3);
+    font-size:  var(--text-caption);
+  }
 }

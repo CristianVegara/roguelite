@@ -25,7 +25,7 @@
 #canvas-bg {
   position:            absolute;
   inset:               0;
-  z-index:             0;          /* below --z-base (1), never intercepts events */
+  z-index:             0;
   background-size:     cover;
   background-position: center;
   background-repeat:   no-repeat;
@@ -42,22 +42,15 @@
   display:          flex;
   align-items:      center;
   justify-content:  center;
-  /* Transparent so #canvas-bg shows through the letterbox areas
-     around the canvas when the viewport aspect ratio doesn't match 480×640. */
   background-color: transparent;
 }
 
-/* Hidden when the router is on any hub screen */
 #canvas-mount.is-hidden {
   display: none;
 }
 
-/* Phaser injects its canvas here; ensure it scales correctly */
 #canvas-mount canvas {
   display:    block;
-  /* Phaser.Scale.FIT handles internal scaling; CSS keeps the canvas
-     centred via the parent flex layout. margin:0 neutralises any
-     inline margins Phaser's Scale Manager may have injected previously. */
   max-width:  100%;
   max-height: 100%;
   margin:     0;
@@ -69,9 +62,6 @@
   position:       absolute;
   inset:          0;
   z-index:        var(--z-raised);
-
-  /* The container itself is click-through.
-     Child elements that need interaction set pointer-events: auto. */
   pointer-events: none;
 }
 
@@ -80,16 +70,11 @@
 #screen-root {
   position:       absolute;
   inset:          0;
-  /* pass-through: an empty screen-root must not capture pointer events.
-     Each mounted screen element sets pointer-events: auto on itself. */
   pointer-events: none;
   overflow:       hidden;
-
-  /* Screen entrance/exit transitions */
   transition: opacity var(--transition-slow) var(--ease-screen);
 }
 
-/* Every HTML screen mounted into #screen-root opts into pointer events */
 #screen-root > * {
   pointer-events: auto;
 }
@@ -99,10 +84,8 @@
 #hud-root {
   position:       absolute;
   inset:          0;
-  pointer-events: none;  /* individual HUD elements opt-in */
+  pointer-events: none;
   z-index:        var(--z-hud);
-
-  /* Hidden outside of combat */
   display: none;
 }
 
@@ -115,11 +98,9 @@
 #modal-root {
   position:       absolute;
   inset:          0;
-  pointer-events: none;  /* active modals set pointer-events: auto on themselves */
+  pointer-events: none;
   z-index:        var(--z-modal);
 }
-
-/* Dim overlay behind modals — rendered by the Modal component, not here */
 
 /* ── Toast root — highest z-index, always on top ─────────────────────────── */
 
@@ -164,7 +145,7 @@
 .u-touch-target::after {
   content:  '';
   position: absolute;
-  inset:    -6px;  /* expands hit area to ~44px minimum */
+  inset:    -6px;
 }
 
 /* ── Utility: tabular numerals for stat displays ──────────────────────────── */
@@ -175,14 +156,12 @@
 
 /* ── Global interactive states ────────────────────────────────────────────── */
 
-/* Active press feedback — applies to all buttons without a custom :active */
 button:not(:disabled):active {
   opacity:    0.75;
   transform:  scale(0.97);
   transition: opacity var(--transition-fast), transform var(--transition-fast);
 }
 
-/* Disabled state — components may override */
 button:disabled,
 select:disabled,
 input:disabled {
@@ -205,21 +184,25 @@ input:disabled {
   border:     0;
 }
 
-/* ── Mobile: font-size floor ─────────────────────────────────────────────── */
-/* On narrow phones the HUD frame scales down by ~0.8×, shrinking --text-caption
-   (9px) to ~7px. Override the two smallest tokens to stay legible. */
-
+/* ── Mobile: font-size overrides ─────────────────────────────────────────── */
+/*
+ * FIX: Base typography scale was raised in tokens.css (caption: 9→11px,
+ * label: 11→13px). The mobile overrides below are now adjusted to push
+ * slightly larger than the new base — not to compensate for the old tiny
+ * base values.
+ *
+ * On narrow phones the HUD frame scales down by ~0.8× via Scale.FIT CSS.
+ * These overrides ensure the HTML UI (screens, modals) stays readable.
+ */
 @media (max-width: 479px) {
   :root {
-    --text-caption: 0.6875rem;  /* bumped to match --text-label (11px) */
-    --text-label:   0.75rem;    /* bumped to 12px */
+    --text-caption: 0.75rem;    /* 12px on mobile (was 0.6875rem / 11px base) */
+    --text-label:   0.875rem;   /* 14px on mobile (was 0.8125rem / 13px base) */
+    --text-body:    0.9375rem;  /* 15px on mobile (was 0.875rem / 14px base) */
   }
 }
 
 /* ── Landscape orientation advisory ──────────────────────────────────────── */
-/* On phones in landscape the canvas becomes height-constrained and very small.
-   Show a polite advisory instead of a broken layout. Hidden on tablets/desktop
-   (min-width: 640px) where landscape is intentional. */
 
 #landscape-advisory {
   display:          none;
@@ -238,8 +221,21 @@ input:disabled {
   pointer-events:   auto;
 }
 
+/* FIX: Added rotate icon element for immediate visual scannability */
 #landscape-advisory .la-icon {
   font-size: 2.5rem;
+  /* Subtle rotation animation to suggest "rotate your device" */
+  animation: la-rotate-hint 2s ease-in-out infinite;
+}
+
+@keyframes la-rotate-hint {
+  0%, 100% { transform: rotate(0deg); }
+  40%       { transform: rotate(-90deg); }
+  60%       { transform: rotate(-90deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #landscape-advisory .la-icon { animation: none; }
 }
 
 #landscape-advisory .la-text {

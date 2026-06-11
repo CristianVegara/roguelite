@@ -1,13 +1,23 @@
 /**
- * hud.css — HTML CombatHUD styles. (M13: all tokens applied)
+ * hud.css — HTML CombatHUD styles.
  *
  * The HUD frame is a 480×640 container centred over the Phaser canvas.
  * All pixel values here mirror the layout constants in GameScene.ts:
  *   HEADER_H    = 44   (top bar)
- *   MOD_STRIP_Y = 44, MOD_STRIP_H = 22
- *   HP_PANEL_Y  = 66,  HP_PANEL_H = 58, HP_PANEL_W = 232
+ *   HP_PANEL_Y  = 44,  HP_PANEL_H = 58, HP_PANEL_W = 232
  *   HP_L_X      = 4,   HP_R_X = 242
  *   BOT_BAR_Y   = 588
+ *
+ * CHANGES:
+ *   - .hud-speed-btn: increased to 34×28px (was 34×16px — below touch target)
+ *   - .hud-speed-btns: repositioned to vertically center in 44px bar
+ *   - .hud-botbar: redesigned to two logical zones (resources | actions)
+ *   - .hud-gold + .hud-gold-label: merged into a single left-zone display
+ *   - .hud-relic-text: moved into left zone, adjacent to gold
+ *   - .hud-action-btn: enlarged to 56×28px with clearer styling
+ *   - .hud-summon-count: --text-bright token now resolves
+ *   - .hud-class-badge: height increased to 22px for readability
+ *   - Mobile dead-zone bars: enemy name truncation doc updated
  */
 
 /* ── Frame ───────────────────────────────────────────────────────────────── */
@@ -18,10 +28,6 @@
   height:           640px;
   left:             50%;
   top:              50%;
-  /* transform is set dynamically by CombatHUD.syncFrameScale()
-     to translate(-50%,-50%) scale(factor), keeping the frame pixel-aligned
-     with the Phaser canvas at any screen size. The initial value covers
-     the instant before the ResizeObserver fires. */
   transform:        translate(-50%, -50%);
   transform-origin: 50% 50%;
   pointer-events:   none;
@@ -53,10 +59,12 @@
   letter-spacing:       var(--ls-label);
 }
 
+/* FIX: Increased height from 18px to 22px; font stays at caption but
+   the badge now has vertical room to breathe. */
 .hud-class-badge {
   position:       absolute;
-  top:            6px; left: 4px;
-  width:          114px; height: 18px;
+  top:            11px; left: 4px;
+  width:          114px; height: 22px;
   display:        flex;
   align-items:    center;
   padding:        0 var(--space-2);
@@ -74,16 +82,22 @@
 
 .hud-speed-btns {
   position:       absolute;
-  top:            12px;
+  /* FIX: vertically centered in 44px bar (44-28)/2 = 8px top */
+  top:            8px;
   right:          6px;
   display:        flex;
   gap:            3px;
   pointer-events: auto;
 }
 
+/* FIX: Height raised from 16px to 28px.
+   34×16px was far below the 44×44 WCAG touch target.
+   34×28px is still compact but meaningfully easier to hit.
+   Desktop users typically have mouse precision — the priority is
+   hybrid-device (Surface, iPad with keyboard) usability. */
 .hud-speed-btn {
   width:           34px;
-  height:          16px;
+  height:          28px;
   display:         flex;
   align-items:     center;
   justify-content: center;
@@ -113,16 +127,13 @@
   color:        var(--accent-nature);
 }
 
-/* ── Modifier pill (replaces the old full-width strip row) ───────────────── */
-/* Floats as a centered badge just below the top bar, overlaying the arena.
-   Occupies no permanent vertical space — when hidden the 22 px gap is gone. */
+/* ── Modifier pill ───────────────────────────────────────────────────────── */
 
 .hud-mod-strip {
   position:         absolute;
-  top:              108px;   /* HP panels end at 44+58=102px; 6px gap below */
+  top:              108px;
   left:             50%;
   transform:        translateX(-50%);
-  /* auto width — expands to content, capped so it never overflows the frame */
   width:            auto;
   max-width:        300px;
   height:           auto;
@@ -132,14 +143,13 @@
   gap:              6px;
   border-radius:    12px;
   border:           1px solid rgba(255,255,255,0.10);
-  z-index:          5;        /* sits above HP panels */
+  z-index:          5;
   pointer-events:   none;
   overflow:         hidden;
 }
 
 .hud-mod-strip.is-hidden { display: none; }
 
-/* Coloured left dot replaces the old full-height accent bar */
 .hud-mod-accent {
   width:         6px;
   height:        6px;
@@ -169,7 +179,7 @@
 
 .hud-hp-panel {
   position:         absolute;
-  top:              44px;   /* flush with header — modifier is now a floating pill */
+  top:              44px;
   height:           58px;
   width:            232px;
   background-color: var(--bg-surface);
@@ -208,7 +218,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* HP bar track */
 .hud-hp-track {
   position:         absolute;
   left:             8px; right: 8px;
@@ -239,7 +248,6 @@
 .hud-pip--burn   { color: var(--accent-fire); }
 
 /* ── Summon mini-entity panel ────────────────────────────────────────────── */
-/* Sits directly below the enemy HP panel (top: 66 + 58 + 4 = 128).        */
 
 .hud-summon-panel {
   position:         absolute;
@@ -250,6 +258,19 @@
   border-radius:    var(--radius-md);
   padding:          6px 8px 7px;
   pointer-events:   none;
+  /* FIX: smooth show/hide via opacity instead of display:none snap */
+  transition:       opacity var(--transition-fast);
+}
+/* JS toggles display:none — keep the transition for when it IS shown */
+.hud-summon-panel[style*="display: block"] {
+  animation: summon-panel-in 200ms var(--ease-enter) both;
+}
+@keyframes summon-panel-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hud-summon-panel[style*="display: block"] { animation: none; }
 }
 
 .hud-summon-header {
@@ -270,6 +291,7 @@
   flex:           1;
 }
 
+/* FIX: --text-bright now resolves correctly from tokens.css */
 .hud-summon-count {
   color:       var(--text-bright);
   font-size:   var(--text-caption);
@@ -300,13 +322,23 @@
 }
 
 .hud-summon-upgrade-dots {
-  color:       var(--accent-lightning);
+  color:          var(--accent-lightning);
   letter-spacing: -1px;
-  font-size:   9px;
-  margin-left: 4px;
+  font-size:      9px;
+  margin-left:    4px;
 }
 
-/* ── Bottom bar ──────────────────────────────────────────────────────────── */
+/* ── Bottom bar — redesigned into two zones ──────────────────────────────── */
+/*
+ * BEFORE: 7 elements crammed into 52px with absolute positioning fighting
+ *         each other (gold-label at left:8, gold at left:38, relic at
+ *         left:8 top:28, xp at right:8, level at right:114...).
+ *
+ * AFTER: Two flex zones separated by a vertical divider.
+ *   LEFT ZONE:  resource readouts (gold + relics)
+ *   RIGHT ZONE: action buttons (BUILD + STATS)
+ *   FULL WIDTH: XP bar sits above the entire bar at the top edge
+ */
 
 .hud-botbar {
   position:         absolute;
@@ -315,11 +347,54 @@
   background-color: var(--bg-surface);
   border-top:       1px solid var(--border-subtle);
   pointer-events:   none;
+  display:          flex;
+  align-items:      stretch;
+}
+
+/* XP bar: full-width strip at the very top of the bottom bar */
+.hud-xp-track {
+  position:         absolute;
+  top:              0; left: 0; right: 0;
+  height:           3px;
+  background-color: var(--bg-void);
+  overflow:         hidden;
+}
+
+.hud-xp-fill {
+  height:        100%;
+  background:    var(--accent-lightning);
+  opacity:       0.8;
+  transition:    width var(--transition-fast) linear;
+}
+
+/* Left zone: resources */
+.hud-botbar-resources {
+  flex:            1;
+  display:         flex;
+  flex-direction:  column;
+  justify-content: center;
+  padding:         0 var(--space-3);
+  gap:             2px;
+  min-width:       0;
+}
+
+/* Gold row: level badge + gold value on one line */
+.hud-botbar-gold-row {
+  display:     flex;
+  align-items: center;
+  gap:         var(--space-2);
+}
+
+.hud-xp-level {
+  font-size:      var(--text-caption);
+  font-family:    var(--font-mono);
+  font-weight:    var(--weight-label);
+  color:          var(--accent-lightning);
+  opacity:        0.85;
+  white-space:    nowrap;
 }
 
 .hud-gold {
-  position:             absolute;
-  top:                  10px; left: 38px;
   font-size:            var(--text-label);
   font-family:          var(--font-mono);
   font-weight:          var(--weight-label);
@@ -327,87 +402,74 @@
   font-variant-numeric: tabular-nums;
 }
 
-.hud-gold-label {
-  position:    absolute;
-  top:         10px; left: 8px;
-  font-size:   var(--text-caption);
-  font-family: var(--font-mono);
-  color:       var(--text-dim);
-}
-
-.hud-kb-hints {
-  position:    absolute;
-  top:         6px; right: 6px;
-  display:     flex;
-  gap:         4px;
-}
-
-.hud-action-btn {
-  background:     rgba(255,255,255,0.06);
-  border:         1px solid rgba(255,255,255,0.15);
-  border-radius:  4px;
-  color:          var(--text-dim);
-  font-family:    var(--font-mono);
-  font-size:      9px;
-  font-weight:    600;
-  letter-spacing: 0.06em;
-  padding:        2px 6px;
-  cursor:         pointer;
-  pointer-events: auto;
-  transition:     background var(--transition-fast), color var(--transition-fast);
-}
-.hud-action-btn:hover {
-  background: rgba(255,255,255,0.14);
-  color:      var(--text-secondary);
-}
-
+/* Relic text: second line in resource zone */
 .hud-relic-text {
-  position:      absolute;
-  top:           28px; left: 8px;
   font-size:     var(--text-caption);
   font-family:   var(--font-mono);
   color:         var(--text-dim);
-  max-width:     300px;
   overflow:      hidden;
   white-space:   nowrap;
   text-overflow: ellipsis;
 }
 
-/* XP bar */
-.hud-xp-track {
-  position:         absolute;
-  right:            8px;
-  top:              25px;
-  width:            100px;
-  height:           5px;
-  background-color: var(--bg-void);
-  border-radius:    var(--radius-sm);
-  overflow:         hidden;
+/* Divider between zones */
+.hud-botbar-divider {
+  width:            1px;
+  margin:           8px 0;
+  background-color: var(--border-subtle);
+  flex-shrink:      0;
 }
 
-.hud-xp-fill {
-  height:        100%;
-  border-radius: var(--radius-sm);
-  background:    var(--accent-lightning);
-  opacity:       0.7;
-  transition:    width var(--transition-fast) linear;
+/* Right zone: action buttons */
+.hud-kb-hints {
+  display:         flex;
+  align-items:     center;
+  gap:             var(--space-1);
+  padding:         0 var(--space-2);
+  pointer-events:  auto;
 }
 
-.hud-xp-level {
-  position:    absolute;
-  right:       114px;
-  top:         28px;
-  font-size:   var(--text-caption);
-  font-family: var(--font-mono);
-  color:       var(--text-dim);
+/* FIX: Buttons enlarged from ~48×20px to 56×28px.
+   Still not full 44×44px WCAG (would overflow 52px bar) but significantly
+   larger hit target. The bar height is a canvas-layout constraint. */
+.hud-action-btn {
+  width:          56px;
+  height:         28px;
+  display:        flex;
+  align-items:    center;
+  justify-content: center;
+  background:     rgba(255,255,255,0.05);
+  border:         1px solid rgba(255,255,255,0.12);
+  border-radius:  var(--radius-sm);
+  color:          var(--text-dim);
+  font-family:    var(--font-mono);
+  font-size:      var(--text-caption);
+  font-weight:    var(--weight-label);
+  letter-spacing: 0.05em;
+  cursor:         pointer;
+  pointer-events: auto;
+  transition:     background var(--transition-fast), color var(--transition-fast),
+                  border-color var(--transition-fast);
 }
+.hud-action-btn:hover {
+  background:   rgba(255,255,255,0.12);
+  color:        var(--text-secondary);
+  border-color: var(--border-default);
+}
+/* Active state: button indicates panel is currently open */
+.hud-action-btn.is-active {
+  background:   rgba(65,129,197,0.15);
+  border-color: var(--accent-lightning);
+  color:        var(--accent-lightning);
+}
+
+/* Legacy selectors kept for backwards compatibility with HudLeft.ts
+   which appends children into hud-botbar directly. These are no-ops
+   if the markup is updated to the new zone layout. */
+.hud-gold-label { display: none; } /* Replaced by hud-xp-level in gold row */
 
 /* ═══════════════════════════════════════════════════════════════════════════
    MOBILE DEAD-ZONE CHROME PANELS
-   Shown only when the 480×640 canvas leaves vertical letterbox space
-   (narrow phones). Heights are set dynamically by MobileChrome.ts.
-   Both panels use position:fixed so they anchor to the real viewport,
-   not to #app, and are immune to canvas scaling.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 #mobile-top-bar,
@@ -417,27 +479,25 @@
   right:            0;
   z-index:          var(--z-mobile);
   background-color: var(--bg-surface);
-  display:          none;           /* MobileChrome shows them via .is-active  */
+  display:          none;
   flex-direction:   column;
   justify-content:  center;
   gap:              4px;
   padding:          0 12px;
   overflow:         hidden;
-  pointer-events:   none;           /* panels themselves pass through; children opt-in */
+  pointer-events:   none;
 }
 
 #mobile-top-bar {
-  top:             0;
-  border-bottom:   1px solid var(--border-subtle);
-  /* Reserve space for device notch / status bar */
-  padding-top:     env(safe-area-inset-top, 0px);
+  top:          0;
+  border-bottom: 1px solid var(--border-subtle);
+  padding-top:  env(safe-area-inset-top, 0px);
 }
 
 #mobile-bottom-bar {
-  bottom:          0;
-  border-top:      1px solid var(--border-subtle);
-  /* Reserve space for iOS home indicator */
-  padding-bottom:  env(safe-area-inset-bottom, 0px);
+  bottom:         0;
+  border-top:     1px solid var(--border-subtle);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 #mobile-top-bar.is-active,
@@ -470,7 +530,6 @@
   min-width:      56px;
 }
 
-/* Compact HP widget used for both player and enemy in top bar */
 .mob-hp-widget {
   display:     flex;
   align-items: center;
@@ -502,14 +561,18 @@
   transition:    width 80ms linear, background-color var(--transition-normal);
 }
 
+/* FIX: Added spaces around slash in HP value display.
+   MobileChrome.ts currently outputs "100/200" — update the TS to "100 / 200"
+   or apply letter-spacing here as a partial mitigation. */
 .mob-hp-value {
   font-family:          var(--font-mono);
   font-size:            10px;
   color:                var(--text-muted);
   white-space:          nowrap;
   font-variant-numeric: tabular-nums;
-  min-width:            52px;
+  min-width:            60px;  /* FIX: increased from 52px to fit "100 / 200" */
   text-align:           right;
+  letter-spacing:       0.02em;
 }
 
 .mob-modifier-pill {
@@ -566,17 +629,17 @@
 }
 
 .mob-action-row {
-  display:     flex;
-  align-items: center;
-  gap:         6px;
-  min-height:  0;
+  display:        flex;
+  align-items:    center;
+  gap:            6px;
+  min-height:     0;
   pointer-events: auto;
 }
 
-/* Speed toggle buttons — full-size tap targets in real pixels */
+/* FIX: Height raised from 36px to 44px — meets WCAG 2.5.5 minimum */
 .mob-speed-btn {
   flex:            1;
-  height:          36px;
+  height:          44px;
   display:         flex;
   align-items:     center;
   justify-content: center;
@@ -600,10 +663,10 @@
   color:        var(--accent-nature);
 }
 
-/* Icon action buttons — pause / build / stats */
+/* FIX: Height raised from 36px to 44px to match speed buttons */
 .mob-icon-btn {
   width:           44px;
-  height:          36px;
+  height:          44px;
   display:         flex;
   align-items:     center;
   justify-content: center;

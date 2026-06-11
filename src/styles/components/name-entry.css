@@ -1,6 +1,11 @@
 /**
- * name-entry.css — NameEntryScreen styles (M11).
- * Uses design tokens. M13 applies visual-identity polish.
+ * name-entry.css — NameEntryScreen styles.
+ * Uses design tokens.
+ *
+ * CHANGES:
+ *   - Added .ne-hint-row flex container for hint + char counter
+ *   - Added .ne-char-count and .ne-char-count.is-near-limit styles
+ *   - .ne-begin-btn: min-height 44px on all viewports (was mobile-only)
  */
 
 .ne-screen {
@@ -44,19 +49,19 @@
 }
 
 .ne-input {
-  width:          100%;
-  padding:        var(--space-3) var(--space-4);
+  width:            100%;
+  padding:          var(--space-3) var(--space-4);
   background-color: var(--bg-raised);
-  border:         1px solid var(--border-default);
-  border-radius:  var(--radius-lg);
-  color:          var(--text-primary);
-  font-family:    var(--font-mono);
-  font-size:      var(--text-heading);
-  text-align:     center;
-  letter-spacing: var(--ls-heading);
-  outline:        none;
-  transition:     border-color var(--transition-fast);
-  box-sizing:     border-box;
+  border:           1px solid var(--border-default);
+  border-radius:    var(--radius-lg);
+  color:            var(--text-primary);
+  font-family:      var(--font-mono);
+  font-size:        var(--text-heading);
+  text-align:       center;
+  letter-spacing:   var(--ls-heading);
+  outline:          none;
+  transition:       border-color var(--transition-fast);
+  box-sizing:       border-box;
 }
 .ne-input:focus          { border-color: var(--accent-lightning); }
 .ne-input.is-error       { border-color: var(--border-danger); }
@@ -70,10 +75,32 @@
   80%      { transform: translateX(4px); }
 }
 
+/* FIX: Hint row holds hint text + character counter side by side */
+.ne-hint-row {
+  display:         flex;
+  align-items:     center;
+  justify-content: space-between;
+  width:           100%;
+  gap:             var(--space-2);
+}
+
 .ne-hint {
   font-size:  var(--text-caption);
   color:      var(--text-dim);
-  text-align: center;
+  flex:       1;
+}
+
+/* FIX: Character counter — right-aligned in the hint row */
+.ne-char-count {
+  font-size:            var(--text-caption);
+  color:                var(--text-dim);
+  font-variant-numeric: tabular-nums;
+  white-space:          nowrap;
+  transition:           color var(--transition-fast);
+}
+/* FIX: Warning state when approaching 16-char limit */
+.ne-char-count.is-near-limit {
+  color: var(--accent-gold);
 }
 
 .ne-error {
@@ -83,9 +110,11 @@
   min-height: 1.2em;
 }
 
+/* FIX: min-height 44px on ALL viewports, not just mobile */
 .ne-begin-btn {
   margin-top:       var(--space-2);
   padding:          var(--space-2) var(--space-7);
+  min-height:       44px;
   background:       none;
   border:           2px solid var(--accent-lightning);
   border-radius:    var(--radius-lg);
@@ -112,21 +141,18 @@
 /* ── Mobile overrides ────────────────────────────────────────────────────── */
 
 @media (max-width: 479px) {
-  /* 48px padding on all sides is too tight on a 375px phone — reduce to 24px */
   .ne-screen {
-    padding: var(--space-5);  /* 24px */
+    padding: var(--space-5);
   }
 
-  /* Input: guarantee a 44px tap/focus target height */
   .ne-input {
     min-height: 48px;
-    font-size:  var(--text-heading);  /* keep readable */
+    font-size:  var(--text-heading);
   }
 
-  /* Begin button: taller, full-width for easy tapping */
   .ne-begin-btn {
     width:      100%;
-    min-height: 48px;
+    min-height: 52px;
     padding:    var(--space-3) var(--space-4);
     font-size:  var(--text-body);
   }

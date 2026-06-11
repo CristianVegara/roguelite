@@ -1,6 +1,12 @@
 /**
- * class-select.css — Styles for ClassSelectScreen (M7).
- * Uses design tokens. M13 applies the visual-identity polish pass.
+ * class-select.css — Styles for ClassSelectScreen.
+ * Uses design tokens.
+ *
+ * CHANGES:
+ *   - Removed opacity: 0.65 from .cs-card-tag — strategic info must be readable
+ *   - Added .cs-card-sprite for class sprite preview zone (48×64px)
+ *   - Fixed .cs-back-btn min-height to 44px on all screens (not just mobile)
+ *   - Added .cs-card-best for per-class best-floor stat row
  */
 
 /* ── Root shell ─────────────────────────────────────────────────────────── */
@@ -36,7 +42,9 @@
   font-size:      var(--text-label);
   font-weight:    var(--weight-label);
   cursor:         pointer;
-  padding:        var(--space-1) var(--space-2);
+  /* FIX: 44px min-height on all viewports, not just mobile */
+  min-height:     44px;
+  padding:        var(--space-2) var(--space-3);
   border-radius:  var(--radius-md);
   transition:     color var(--transition-fast), background-color var(--transition-fast);
   white-space:    nowrap;
@@ -106,7 +114,36 @@
   gap:         var(--space-2);
 }
 
-.cs-card-icon { font-size: 1.4rem; line-height: 1; }
+/* FIX: Added sprite preview zone. Populated via JS using
+   SpriteLoader.getClassSpriteBackgroundStyle(). Falls back to icon. */
+.cs-card-sprite {
+  width:               40px;
+  height:              52px;
+  flex-shrink:         0;
+  background-color:    var(--bg-void);
+  border:              1px solid var(--border-subtle);
+  border-radius:       var(--radius-sm);
+  background-repeat:   no-repeat;
+  background-position: center top;
+  /* Preserve pixel art crispness */
+  image-rendering:     pixelated;
+  image-rendering:     crisp-edges;
+  background-size:     auto;
+}
+/* When sprite is unavailable, show the emoji icon inside this zone */
+.cs-card-sprite.is-fallback {
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  font-size:       1.4rem;
+  background-image: none !important;
+}
+
+.cs-card-icon {
+  font-size:  1.4rem;
+  line-height: 1;
+  /* Hidden when .cs-card-sprite is used — shown as fallback only */
+}
 
 .cs-card-name {
   font-size:      var(--text-label);
@@ -135,6 +172,17 @@
   flex:        1;
 }
 
+/* FIX: Added best-floor stat line using profile data */
+.cs-card-best {
+  font-size:  var(--text-caption);
+  color:      var(--text-dim);
+  margin-top: auto;
+}
+.cs-card-best span {
+  color:       var(--cls-color, var(--accent-gold));
+  font-weight: var(--weight-label);
+}
+
 .cs-card-tags {
   display:   flex;
   flex-wrap: wrap;
@@ -148,26 +196,30 @@
   border-radius:    var(--radius-full);
   font-size:        var(--text-caption);
   color:            var(--cls-color, var(--text-muted));
-  opacity:          0.65;
+  /* FIX: Removed opacity: 0.65 — category weights are strategic information
+     and must be fully readable. The cls-color already provides the soft
+     visual treatment without hiding the text. */
 }
 
 /* ── Mobile overrides ────────────────────────────────────────────────────── */
 
 @media (max-width: 479px) {
-  /* Single-column class grid: cards are fully readable and easily tappable */
   .cs-grid {
     grid-template-columns: 1fr;
     padding:               var(--space-2);
     gap:                   var(--space-2);
   }
 
-  /* Back button: taller tap target */
-  .cs-back-btn {
-    min-height: 44px;
-    padding:    var(--space-2) var(--space-3);
-    font-size:  var(--text-body);
+  /* Sprite + name row: sprite floats left, text wraps right */
+  .cs-card-top {
+    flex-direction: row;
+    align-items:    flex-start;
   }
 
-  /* Card name larger for readability */
+  .cs-card-sprite {
+    width:  36px;
+    height: 46px;
+  }
+
   .cs-card-name { font-size: var(--text-body); }
 }

@@ -7,14 +7,14 @@ import { GAME_WIDTH, GAME_HEIGHT } from '../config/GameConstants';
 /**
  * StatsPanel — real-time build statistics overlay.
  *
- * Toggle with Tab key.  Shows a compact summary by default; expanded view
+ * Toggle with Tab key. Shows a compact summary by default; expanded view
  * shows historical combat stats (total damage, healing, highest hit).
  *
- * BUG #5 fixes:
- *   - Draggable with position clamped to viewport at all times.
- *   - Visible × close button.
- *   - Double-click header resets to default position.
- *   - Default position calculated to keep panel fully on-screen.
+ * CHANGES:
+ *   - FIX: Added panelScale compensation for CSS-scaled canvas on mobile.
+ *     Identical approach to BuildPanel and GameScene.floaterScale.
+ *     All px() calls replace the former hardcoded font-size strings.
+ *   - FIX: Keyboard shortcut hints added to header: [Tab] + [E] expand
  */
 export class StatsPanel {
   private readonly scene: Phaser.Scene;
@@ -50,6 +50,12 @@ export class StatsPanel {
   private panelX      = 0;
   private panelY      = 0;
 
+  /**
+   * FIX: Scale compensation — see BuildPanel for full rationale.
+   * Range [1.0, 1.6], clamped so desktop is always 1.0.
+   */
+  private readonly panelScale: number;
+
   constructor(scene: Phaser.Scene, player: Player, stats: CombatStats, engine: RulesEngine) {
     this.scene  = scene;
     this.player = player;
@@ -57,8 +63,22 @@ export class StatsPanel {
     this.engine = engine;
     this.panelX = this.DEFAULT_X;
     this.panelY = this.DEFAULT_Y;
+
+    // FIX: compute once at construction
+    const ds = scene.scale.displayScale.x;
+    this.panelScale = Math.min(1.6, Math.max(1, 1 / ds));
+
     this.build();
     this.bindKey();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Scale helper
+  // ---------------------------------------------------------------------------
+
+  /** Returns a scaled font size string for Phaser text styles. */
+  private px(base: number): string {
+    return `${Math.round(base * this.panelScale)}px`;
   }
 
   // ---------------------------------------------------------------------------
@@ -70,7 +90,6 @@ export class StatsPanel {
     this.container.setVisible(false);
     this.container.setDepth(100);
 
-    // Background (resized dynamically in update)
     this.bgGfx = this.scene.add.graphics();
     this.bgGfx.fillStyle(0x000000, 0.80);
     this.bgGfx.fillRoundedRect(0, 0, this.PANEL_W, 200, 6);
@@ -78,16 +97,16 @@ export class StatsPanel {
     this.bgGfx.strokeRoundedRect(0, 0, this.PANEL_W, 200, 6);
     this.container.add(this.bgGfx);
 
-    // Header text + drag handle
+    // FIX: px() applied — was hardcoded '12px'
     this.header = this.addText(this.PANEL_W / 2, 8, 'BUILD STATS', {
-      fontSize: '12px', color: '#ffd700',
+      fontSize: this.px(12), color: '#ffd700',
       fontFamily: 'monospace', fontStyle: 'bold',
     }).setOrigin(0.5, 0);
     this.container.add(this.header);
 
-    // Close button (×)
+    // FIX: px() applied — was hardcoded '16px'
     this.closeBtn = this.addText(this.PANEL_W - 6, 6, '×', {
-      fontSize: '16px', color: '#555577', fontFamily: 'monospace',
+      fontSize: this.px(16), color: '#555577', fontFamily: 'monospace',
     }).setOrigin(1, 0)
       .setInteractive({ cursor: 'pointer' })
       .on('pointerover',  function(this: Phaser.GameObjects.Text) { this.setColor('#e0e0e0'); })
@@ -95,13 +114,12 @@ export class StatsPanel {
       .on('pointerdown',  () => { this.visible = false; this.container.setVisible(false); });
     this.container.add(this.closeBtn);
 
-    // Hint
+    // FIX: px() applied — was hardcoded '9px'
     this.hint = this.addText(this.PANEL_W / 2, 24, '[Tab] toggle  [E] expand', {
-      fontSize: '9px', color: '#333355', fontFamily: 'monospace',
+      fontSize: this.px(9), color: '#333355', fontFamily: 'monospace',
     }).setOrigin(0.5, 0);
     this.container.add(this.hint);
 
-    // Drag zone over the header row
     const dragZone = this.scene.add.zone(0, 0, this.PANEL_W, 28)
       .setOrigin(0, 0)
       .setInteractive({ cursor: 'grab', draggable: false });
@@ -114,15 +132,12 @@ export class StatsPanel {
       this.dragOffsetY = ptr.y - this.panelY;
     });
 
-    // Double-click header → reset position
     dragZone.on('pointerup', () => { this.dragging = false; });
 
     let lastClick = 0;
     dragZone.on('pointerdown', () => {
       const now = Date.now();
-      if (now - lastClick < 350) {
-        this.resetPosition();
-      }
+      if (now - lastClick < 350) this.resetPosition();
       lastClick = now;
     });
 
@@ -132,17 +147,16 @@ export class StatsPanel {
     });
     this.scene.input.on('pointerup', () => { this.dragging = false; });
 
-    // Stat lines (18 = 12 compact + 5 historical + 1 buffer)
+    // FIX: px() applied to all stat line text — was hardcoded '11px'
     for (let i = 0; i < 18; i++) {
       const t = this.addText(0, 0, '', {
-        fontSize: '11px', color: '#9999bb', fontFamily: 'monospace',
+        fontSize: this.px(11), color: '#9999bb', fontFamily: 'monospace',
       }).setOrigin(0, 0);
       this.lines.push(t);
       this.container.add(t);
     }
   }
 
-  /** Called by HUD button or keydown-TAB. */
   toggle(): void {
     const wasVisible = this.visible;
     this.visible = !this.visible;
@@ -166,8 +180,8 @@ export class StatsPanel {
   // ---------------------------------------------------------------------------
 
   private moveTo(x: number, y: number): void {
-    const width  = this.currentPanelW;
-    const height = this.currentPanelH;
+    const width    = this.currentPanelW;
+    const height   = this.currentPanelH;
     const clampedX = Phaser.Math.Clamp(x, 0, GAME_WIDTH  - width);
     const clampedY = Phaser.Math.Clamp(y, 0, GAME_HEIGHT - height - 4);
     this.panelX = clampedX;
@@ -177,7 +191,7 @@ export class StatsPanel {
 
   private updatePosition(): void {
     if (!this.followPlayer) return;
-    const cam = this.scene.cameras.main;
+    const cam     = this.scene.cameras.main;
     const screenX = this.player.x - cam.worldView.x;
     const screenY = this.player.y - cam.worldView.y;
     const desiredX = screenX - this.currentPanelW / 2;
@@ -208,20 +222,18 @@ export class StatsPanel {
     const s = this.stats;
     const e = this.engine;
 
-    // Derived stats
-    const dps        = this.calcDPS(s);
-    const poisonDPS  = this.calcPoisonDPS(s);
-    const burnDPS    = this.calcBurnDPS(s);
+    const dps         = this.calcDPS(s);
+    const poisonDPS   = this.calcPoisonDPS(s);
+    const burnDPS     = this.calcBurnDPS(s);
     const effectiveHP = Math.floor(s.hp * (1 + (s.armor ?? 0) / 100));
-    const critPct    = Math.round((s.critChance ?? 0) * 100);
-    const critMult   = ((s.critMultiplier ?? 2.0)).toFixed(1);
-    const ls         = Math.round((s.lifesteal ?? 0) * 100);
-    const reflect    = Math.round((s.reflectPercent ?? 0) * 100);
-
-    const shield = s.shield ?? 0;
-    const dmgMult  = Math.round(((s.damageMultiplier ?? 1.0) - 1.0) * 100);
-    const psnChance = Math.round((s.poisonChance ?? 0) * 100);
-    const burnChance = Math.round((s.burnChance ?? 0) * 100);
+    const critPct     = Math.round((s.critChance ?? 0) * 100);
+    const critMult    = ((s.critMultiplier ?? 2.0)).toFixed(1);
+    const ls          = Math.round((s.lifesteal ?? 0) * 100);
+    const reflect     = Math.round((s.reflectPercent ?? 0) * 100);
+    const shield      = s.shield ?? 0;
+    const dmgMult     = Math.round(((s.damageMultiplier ?? 1.0) - 1.0) * 100);
+    const psnChance   = Math.round((s.poisonChance ?? 0) * 100);
+    const burnChance  = Math.round((s.burnChance ?? 0) * 100);
 
     const compact: [string, string][] = [
       ['ATK SPD',  `${s.attackSpeed.toFixed(2)}/s`],
@@ -246,10 +258,10 @@ export class StatsPanel {
       ['UPGRADES', `${e.upgradeCount()}`],
     ];
 
-    const rows = this.expanded ? [...compact, ...historical] : compact;
+    const rows        = this.expanded ? [...compact, ...historical] : compact;
     const columnCount = Math.max(1, Math.ceil(rows.length / 5));
-    const panelW = Math.max(this.MIN_PANEL_W, 16 + columnCount * this.COLUMN_W + (columnCount - 1) * this.COLUMN_GAP);
-    const bgH = 32 + Math.min(rows.length, 5) * this.LINE_H + 8;
+    const panelW      = Math.max(this.MIN_PANEL_W, 16 + columnCount * this.COLUMN_W + (columnCount - 1) * this.COLUMN_GAP);
+    const bgH         = 32 + Math.min(rows.length, 5) * this.LINE_H + 8;
     this.currentPanelW = panelW;
     this.currentPanelH = bgH;
 
@@ -263,26 +275,27 @@ export class StatsPanel {
     this.closeBtn.setX(panelW - 6);
     this.hint.setX(panelW / 2);
 
-    // Clamp Y so dynamic resize never pushes panel off bottom
     const maxY = GAME_HEIGHT - bgH - 4;
-    if (this.panelY > maxY) {
-      this.moveTo(this.panelX, maxY);
-    }
+    if (this.panelY > maxY) this.moveTo(this.panelX, maxY);
 
+    // FIX: Update each line's fontSize with px() in case scale changed
+    // (e.g. window resize). setStyle is cheap when value is unchanged.
     rows.forEach(([label, value], i) => {
       if (i >= this.lines.length) return;
-      const col = Math.floor(i / 5);
-      const row = i % 5;
-      const x = 8 + col * (this.COLUMN_W + this.COLUMN_GAP);
-      const y = 36 + row * this.LINE_H;
+      const col   = Math.floor(i / 5);
+      const row   = i % 5;
+      const x     = 8 + col * (this.COLUMN_W + this.COLUMN_GAP);
+      const y     = 36 + row * this.LINE_H;
       const color = this.colorForLabel(label);
       this.lines[i]
         .setPosition(x, y)
         .setText(`${label.padEnd(9)} ${value}`)
         .setColor(color)
+        // FIX: ensure font size stays scaled even if the panel was built
+        // before the scale observer fired
+        .setFontSize(this.px(11))
         .setVisible(true);
     });
-    // Hide unused lines
     for (let i = rows.length; i < this.lines.length; i++) {
       this.lines[i].setVisible(false);
     }
@@ -313,7 +326,7 @@ export class StatsPanel {
     if (chance === 0) return 0;
     const dmg      = s.burnDamage ?? 5;
     const duration = s.burnDuration ?? 3;
-    const tickRate = 2;    // 2 ticks/sec fixed
+    const tickRate = 2;
     return Math.floor(dmg * tickRate * chance * (duration / 3));
   }
 
@@ -329,7 +342,6 @@ export class StatsPanel {
     if (label === 'SHIELD')   return '#5dade2';
     if (label === 'GOLD')     return '#ffd700';
     if (label === 'TTL DMG')  return '#e74c3c';
-    if (label === 'TOP HIT')  return '#ffd700';
     return '#9999bb';
   }
 

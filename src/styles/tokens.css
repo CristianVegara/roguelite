@@ -63,6 +63,9 @@
   --color-rose:        #DE599C;
   --color-blood:       #B41C39;
   --color-dark-blood:  #81090A;
+  /* FIX: --color-danger was referenced in modals.css but never defined.
+     Alias to accent-danger so both names work. */
+  --color-danger:      #B41C39;
 
 
   /* ═══════════════════════════════════════════════════════════════════════════
@@ -77,19 +80,30 @@
   --bg-float:    #2a2238;            /* Layer 4 — tooltips, popovers, dropdowns */
   --bg-overlay:  rgba(0,0,0,0.88);  /* Layer 5 — full-screen modal dim */
   --bg-input:    #1a1525;            /* Input fields */
+  /* FIX: --bg-panel was referenced in modals.css (pause-panel) but never defined.
+     Sits between surface and raised — distinct from both. */
+  --bg-panel:    #16121f;
 
 
   /* ═══════════════════════════════════════════════════════════════════════════
      3. SEMANTIC TEXT ROLES
      ═══════════════════════════════════════════════════════════════════════════ */
 
-  --text-primary:   #E1E5D8;  /* All body text, headings */
-  --text-secondary: #ACAABD;  /* Labels, captions, secondary info */
-  --text-muted:     #83758B;  /* Hints, placeholder text */
-  --text-dim:       #524C52;  /* Disabled, dead states */
-  --text-accent:    #DEA541;  /* Gold values, currency */
-  --text-danger:    #943820;  /* Warnings, errors */
-  --text-heal:      #39996A;  /* Healing values, positive effects */
+  --text-primary:    #E1E5D8;  /* All body text, headings */
+  --text-secondary:  #ACAABD;  /* Labels, captions, secondary info */
+  /* FIX: raised from #83758B (~3.2:1 on --bg-raised) to #9A8DA8 (~4.6:1).
+     Passes WCAG AA at all used sizes. */
+  --text-muted:      #9A8DA8;  /* Hints, placeholder text */
+  --text-dim:        #524C52;  /* Disabled, dead states — decorative use only */
+  --text-accent:     #DEA541;  /* Gold values, currency */
+  --text-danger:     #943820;  /* Warnings, errors */
+  --text-heal:       #39996A;  /* Healing values, positive effects */
+  /* FIX: --text-bright was referenced in hud.css (hud-summon-count) but never
+     defined. Alias to text-primary — it means "maximum brightness text". */
+  --text-bright:     #E1E5D8;
+  /* FIX: --text-on-accent was referenced in home.css (active title chip) but
+     never defined. Dark text for use on coloured button/accent backgrounds. */
+  --text-on-accent:  #0a0810;
 
 
   /* ═══════════════════════════════════════════════════════════════════════════
@@ -104,19 +118,26 @@
   --border-danger:     #943820;                 /* Error, warning state */
   --border-success:    #39996A;                 /* Success, heal state */
   --border-legendary:  #DEA541;                 /* Legendary rarity */
+  /* FIX: --border-highlight was referenced in modals.css and home.css but
+     never defined. Sits between border-default and border-active in weight —
+     used for hover states that don't imply selection. */
+  --border-highlight:  rgba(172,170,189,0.35);
 
 
   /* ═══════════════════════════════════════════════════════════════════════════
      5. INTERACTIVE / ACCENT ROLES
      ═══════════════════════════════════════════════════════════════════════════ */
 
-  --accent-primary:    #7B34BD;  /* Primary interactive colour */
-  --accent-gold:       #DEA541;  /* Currency, rewards */
-  --accent-fire:       #C56129;  /* Fire/burn effects */
-  --accent-nature:     #39996A;  /* Healing, poison */
-  --accent-lightning:  #4181C5;  /* Lightning, arcane */
-  --accent-glow:       #BD59DE;  /* Legendary, active glow */
-  --accent-danger:     #B41C39;  /* Death, critical fail */
+  --accent-primary:        #7B34BD;  /* Primary interactive colour */
+  --accent-gold:           #DEA541;  /* Currency, rewards */
+  --accent-fire:           #C56129;  /* Fire/burn effects */
+  --accent-nature:         #39996A;  /* Healing, poison */
+  --accent-lightning:      #4181C5;  /* Lightning, arcane */
+  --accent-glow:           #BD59DE;  /* Legendary, active glow */
+  --accent-danger:         #B41C39;  /* Death, critical fail */
+  /* FIX: --accent-primary-hover was referenced in modals.css (resume button)
+     but never defined. Lighter purple for hover/active state on primary. */
+  --accent-primary-hover:  #9B52D4;
 
 
   /* ═══════════════════════════════════════════════════════════════════════════
@@ -133,18 +154,20 @@
   --rarity-common-icon:    "▪";
   --rarity-common-name:    var(--text-secondary);
 
-  /* Rare (was Uncommon) */
+  /* Rare */
   --rarity-rare-color:     #4181C5;
   --rarity-rare-border:    rgba(65,129,197,0.55);
-  --rarity-rare-glow:      none;
+  /* FIX: glow was 'none' — too subtle. Small ambient glow now applied. */
+  --rarity-rare-glow:      0 0 5px rgba(65,129,197,0.18);
   --rarity-rare-bar-h:     4px;
   --rarity-rare-icon:      "◆";
   --rarity-rare-name:      #4181C5;
 
-  /* Epic (was Rare) */
+  /* Epic */
   --rarity-epic-color:     #7B34BD;
   --rarity-epic-border:    rgba(123,52,189,0.65);
-  --rarity-epic-glow:      0 0 6px rgba(123,52,189,0.20);
+  /* FIX: raised opacity from 0.20 → 0.40 for visibility on dark backgrounds. */
+  --rarity-epic-glow:      0 0 8px rgba(123,52,189,0.40);
   --rarity-epic-bar-h:     5px;
   --rarity-epic-icon:      "✦";
   --rarity-epic-name:      #BD59DE;
@@ -152,7 +175,8 @@
   /* Legendary */
   --rarity-legendary-color:   #DEA541;
   --rarity-legendary-border:  rgba(222,165,65,0.60);
-  --rarity-legendary-glow:    0 0 12px rgba(222,165,65,0.30);
+  /* FIX: raised opacity from 0.30 → 0.55 for visibility on dark backgrounds. */
+  --rarity-legendary-glow:    0 0 14px rgba(222,165,65,0.55);
   --rarity-legendary-bar-h:   6px;
   --rarity-legendary-icon:    "♛";
   --rarity-legendary-name:    #E6E69C;
@@ -172,6 +196,10 @@
      7. TYPOGRAPHY SCALE
      Seven levels. All in rem (16px base). Never use px for font sizes in components.
      Always add font-variant-numeric: tabular-nums to numerical stat displays.
+
+     FIX: Caption and label floors raised to meet WCAG 1.4.4 minimum legibility
+     at standard viewing distances. Body raised to 14px for comfortable reading.
+     Two new tokens added (--text-xl, --text-sm) that were referenced but missing.
      ═══════════════════════════════════════════════════════════════════════════ */
 
   /* Font family */
@@ -180,10 +208,12 @@
   /* Scale */
   --text-display:  2rem;       /* 32px — floor cleared, game over title */
   --text-title:    1.375rem;   /* 22px — screen titles */
+  --text-xl:       1.25rem;    /* 20px — NEW: modal panel headers */
   --text-heading:  1rem;       /* 16px — section headers, panel titles */
-  --text-body:     0.8125rem;  /* 13px — normal UI text, descriptions */
-  --text-label:    0.6875rem;  /* 11px — labels, keyboard hints, small badges */
-  --text-caption:  0.5625rem;  /* 9px  — timestamps, fine print, version numbers */
+  --text-body:     0.875rem;   /* 14px — RAISED from 13px: normal UI text */
+  --text-sm:       0.75rem;    /* 12px — NEW: secondary button labels, sub-hints */
+  --text-label:    0.8125rem;  /* 13px — RAISED from 11px: labels, keyboard hints */
+  --text-caption:  0.6875rem;  /* 11px — RAISED from 9px: timestamps, fine print */
   --text-stat:     1.125rem;   /* 18px — numbers in stat panels, HP values, DPS */
 
   /* Weights */
@@ -226,6 +256,8 @@
   --space-6:  32px;  /* Large section gaps */
   --space-7:  48px;  /* Screen-level spacing */
   --space-8:  64px;  /* Major layout gaps */
+  --space-10: 40px;  /* FIX: referenced in modals.css (pause-panel padding) but
+                        skipped in original scale — added between space-7 and space-8 */
 
 
   /* ═══════════════════════════════════════════════════════════════════════════
@@ -270,11 +302,12 @@
 
   /* ═══════════════════════════════════════════════════════════════════════════
      12. BREAKPOINTS (reference only — use in media queries)
-     compact:  0–767px   phones
-     medium:   768–1199px  tablets, small laptops
-     wide:     1200px+   desktop
+     compact:  0–639px    phones
+     medium:   640–1199px tablets, small laptops   ← FIX: was 767px, raised to 639px
+     wide:     1200px+    desktop
      ═══════════════════════════════════════════════════════════════════════════ */
 
+  --bp-compact: 639px;   /* FIX: added explicit compact breakpoint */
   --bp-medium:  768px;
   --bp-wide:    1200px;
 

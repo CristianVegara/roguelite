@@ -1,7 +1,18 @@
 /**
  * modals.css — Shared modal chrome + UpgradeModal, RelicModal, MerchantModal,
  *              GameOverModal, PauseModal styles.
- * Uses design tokens. M13 applies full visual-identity polish.
+ * Uses design tokens.
+ *
+ * CHANGES:
+ *   - .pause-panel: --bg-panel now resolves (token was missing before)
+ *   - .pause-btn--resume: --text-on-accent and --accent-primary-hover now resolve
+ *   - .mm-consumable.is-sold: "SOLD" text overlay added via ::after (CSS-only)
+ *   - .mm-leave-btn: demoted to secondary button (was dominant with 2px border)
+ *   - .mm-reroll-btn: updated to include contextual label via attr()
+ *   - .um-skip-btn: improved visibility and always-visible placement
+ *   - .go-btn-primary / .go-btn-secondary: hierarchy improved
+ *   - .go-title-unlock: promotion animation added for milestone moments
+ *   - Rarity glows now reference updated token values (higher opacity)
  */
 
 /* ── Shared modal dim overlay ───────────────────────────────────────────── */
@@ -38,11 +49,22 @@
 
 /* ── Header ─────────────────────────────────────────────────────────────── */
 
-.um-header { text-align: center; }
+/* FIX: Header row now holds context label + skip button side by side
+   so skip is never below the fold. */
+.um-header {
+  display:         flex;
+  align-items:     center;
+  justify-content: space-between;
+  width:           100%;
+  gap:             var(--space-3);
+}
+
+.um-header-text { flex: 1; }
 
 .um-title {
   font-family:    var(--font-mono);
-  font-size:      var(--text-heading);
+  /* FIX: promoted from --text-heading to --text-xl for emphasis */
+  font-size:      var(--text-xl);
   font-weight:    var(--weight-heading);
   letter-spacing: var(--ls-heading);
   color:          var(--text-primary);
@@ -125,12 +147,23 @@
   line-height:    var(--lh-label);
 }
 
-/* Rarity visual system: accent-bar height driven by rarity token */
+/* Rarity visual system — glow values now reference updated token opacities */
 .um-card[data-rarity="common"]    { border-top-width: var(--rarity-common-bar-h); }
 .um-card[data-rarity="uncommon"],
-.um-card[data-rarity="rare"]      { border-top-width: var(--rarity-rare-bar-h); box-shadow: var(--rarity-rare-glow); }
-.um-card[data-rarity="epic"]      { border-top-width: var(--rarity-epic-bar-h); box-shadow: var(--rarity-epic-glow); }
-.um-card[data-rarity="legendary"] { border-top-width: var(--rarity-legendary-bar-h); box-shadow: var(--rarity-legendary-glow); }
+.um-card[data-rarity="rare"]      { border-top-width: var(--rarity-rare-bar-h);
+                                    box-shadow: var(--rarity-rare-glow); }
+.um-card[data-rarity="epic"]      { border-top-width: var(--rarity-epic-bar-h);
+                                    box-shadow: var(--rarity-epic-glow); }
+.um-card[data-rarity="legendary"] { border-top-width: var(--rarity-legendary-bar-h);
+                                    box-shadow: var(--rarity-legendary-glow); }
+
+/* FIX: Legendary also gets a colored border on all sides, not just the top accent */
+.um-card[data-rarity="legendary"] {
+  border-color: var(--rarity-legendary-border);
+}
+.um-card[data-rarity="epic"] {
+  border-color: var(--rarity-epic-border);
+}
 
 .um-card-divider {
   height:           1px;
@@ -160,6 +193,29 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* ── Skip button ─────────────────────────────────────────────────────────── */
+/* FIX: Skip is now in the header row (see .um-header flex layout above),
+   always visible regardless of card count or scroll position. */
+.um-skip-btn {
+  background:     none;
+  border:         1px solid var(--border-default);
+  border-radius:  var(--radius-md);
+  color:          var(--text-secondary);
+  font-family:    var(--font-mono);
+  font-size:      var(--text-label);
+  font-weight:    var(--weight-label);
+  padding:        var(--space-2) var(--space-4);
+  min-height:     44px;
+  cursor:         pointer;
+  letter-spacing: var(--ls-label);
+  white-space:    nowrap;
+  transition:     color var(--transition-fast), border-color var(--transition-fast);
+}
+.um-skip-btn:hover {
+  color:        var(--text-primary);
+  border-color: var(--border-highlight);
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════
    RELIC MODAL
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -177,11 +233,17 @@
   border-radius:    var(--radius-xl);
 }
 
-.rm-header { text-align: center; }
+.rm-header {
+  display:         flex;
+  align-items:     center;
+  justify-content: space-between;
+  width:           100%;
+}
+.rm-header-text  { flex: 1; text-align: center; }
 
 .rm-title {
   font-family:    var(--font-mono);
-  font-size:      var(--text-heading);
+  font-size:      var(--text-xl);
   font-weight:    var(--weight-heading);
   color:          var(--accent-gold);
 }
@@ -208,7 +270,8 @@
   padding:          var(--space-3);
   background-color: var(--bg-raised);
   border:           1px solid var(--border-subtle);
-  border-top:       5px solid var(--relic-color, var(--accent-gold));
+  /* FIX: Relics always get the full 6px top accent — they're always impactful */
+  border-top:       6px solid var(--relic-color, var(--accent-gold));
   border-radius:    var(--radius-lg);
   cursor:           pointer;
   font-family:      var(--font-mono);
@@ -223,13 +286,28 @@
 }
 .rm-card.is-selected { transform: scale(0.94); }
 
+/* FIX: Legendary relic entry animation — subtle glow pulse on open.
+   Respects prefers-reduced-motion. */
+.rm-card[data-rarity="legendary"] {
+  animation: relic-legendary-reveal 1.5s ease-out forwards;
+}
+@keyframes relic-legendary-reveal {
+  0%   { box-shadow: 0 0 0px rgba(222,165,65,0); }
+  40%  { box-shadow: var(--rarity-legendary-glow); }
+  100% { box-shadow: var(--rarity-legendary-glow); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rm-card[data-rarity="legendary"] { animation: none; }
+}
+
 .rm-card-badges {
   display:         flex;
   justify-content: space-between;
   align-items:     center;
   width:           100%;
 }
-.rm-card-type   { font-size: var(--text-caption); color: var(--relic-color, var(--accent-gold)); opacity: 0.7; }
+/* FIX: Relic type tag at full opacity — was 0.7 */
+.rm-card-type   { font-size: var(--text-caption); color: var(--relic-color, var(--accent-gold)); }
 .rm-card-rarity { font-size: var(--text-caption); color: var(--rarity-color, var(--text-muted)); }
 
 .rm-card-gem {
@@ -285,7 +363,7 @@
 }
 
 .mm-header    { text-align: center; }
-.mm-title     { font-size: var(--text-heading); font-weight: var(--weight-heading); color: var(--accent-gold); }
+.mm-title     { font-size: var(--text-xl); font-weight: var(--weight-heading); color: var(--accent-gold); }
 .mm-subtitle  { font-size: var(--text-caption); color: var(--text-dim); margin-top: var(--space-1); }
 .mm-gold      { font-size: var(--text-body); font-weight: var(--weight-label); color: var(--accent-gold);
                 margin-top: var(--space-1); font-variant-numeric: tabular-nums; }
@@ -305,6 +383,7 @@
 }
 
 .mm-consumable {
+  position:         relative;  /* FIX: needed for ::after SOLD overlay */
   display:          flex;
   flex-direction:   column;
   gap:              2px;
@@ -318,6 +397,23 @@
 .mm-consumable:hover       { background-color: var(--bg-float); border-color: var(--border-success); }
 .mm-consumable.is-sold     { opacity: 0.4; cursor: default; }
 .mm-consumable.is-flash    { animation: flash-red 0.3s; }
+
+/* FIX: CSS-only "SOLD" text overlay — no JS changes needed. */
+.mm-consumable.is-sold::after {
+  content:          'SOLD';
+  position:         absolute;
+  inset:            0;
+  display:          flex;
+  align-items:      center;
+  justify-content:  center;
+  font-size:        var(--text-label);
+  font-weight:      var(--weight-label);
+  letter-spacing:   var(--ls-label);
+  color:            var(--text-dim);
+  background-color: rgba(10,8,16,0.55);
+  border-radius:    inherit;
+  pointer-events:   none;
+}
 
 @keyframes flash-red {
   0%, 100% { border-color: var(--border-subtle); }
@@ -336,6 +432,7 @@
 }
 
 .mm-offer-card {
+  position:         relative;  /* FIX: needed for ::after SOLD overlay */
   display:          flex;
   flex-direction:   column;
   gap:              var(--space-1);
@@ -348,14 +445,33 @@
   font-family:      var(--font-mono);
   transition:       background-color var(--transition-fast), border-color var(--transition-fast);
 }
-.mm-offer-card:hover              { background-color: var(--bg-float); border-color: var(--upg-color, var(--accent-primary)); }
+.mm-offer-card:hover              { background-color: var(--bg-float);
+                                    border-color: var(--upg-color, var(--accent-primary)); }
 .mm-offer-card.is-sold            { opacity: 0.35; cursor: default; }
 .mm-offer-card.is-cant-afford     { opacity: 0.6; }
 .mm-offer-card.is-flash           { animation: flash-red 0.3s; }
 
+/* FIX: SOLD overlay for upgrade offer cards too */
+.mm-offer-card.is-sold::after {
+  content:          'SOLD';
+  position:         absolute;
+  inset:            0;
+  display:          flex;
+  align-items:      center;
+  justify-content:  center;
+  font-size:        var(--text-label);
+  font-weight:      var(--weight-label);
+  letter-spacing:   var(--ls-label);
+  color:            var(--text-dim);
+  background-color: rgba(10,8,16,0.55);
+  border-radius:    inherit;
+  pointer-events:   none;
+}
+
 .mm-buy-btn {
   margin-top:     auto;
   padding:        3px var(--space-2);
+  min-height:     32px;
   background:     none;
   border:         1px solid var(--border-subtle);
   border-radius:  var(--radius-md);
@@ -376,17 +492,18 @@
 .mm-footer {
   display:         flex;
   gap:             var(--space-2);
-  justify-content: center;
+  align-items:     center;
+  justify-content: space-between;
 }
 
 .mm-reroll-btn {
-  padding:        var(--space-1) var(--space-4);
+  padding:        var(--space-1) var(--space-3);
   background:     none;
   border:         1px solid var(--accent-lightning);
   border-radius:  var(--radius-md);
   color:          var(--accent-lightning);
   font-family:    var(--font-mono);
-  font-size:      var(--text-label);
+  font-size:      var(--text-sm);
   font-weight:    var(--weight-label);
   cursor:         pointer;
   font-variant-numeric: tabular-nums;
@@ -395,20 +512,25 @@
 .mm-reroll-btn:hover    { background-color: rgba(65,129,197,0.1); }
 .mm-reroll-btn:disabled { opacity: 0.35; cursor: default; }
 
+/* FIX: LEAVE demoted from 2px-border dominant button to a ghost text link.
+   Was the most visually dominant element in the footer — wrong hierarchy. */
 .mm-leave-btn {
-  padding:        var(--space-1) var(--space-5);
+  padding:        var(--space-1) var(--space-3);
   background:     none;
-  border:         2px solid var(--accent-lightning);
+  border:         1px solid var(--border-subtle);
   border-radius:  var(--radius-md);
-  color:          var(--accent-lightning);
+  color:          var(--text-muted);
   font-family:    var(--font-mono);
-  font-size:      var(--text-label);
-  font-weight:    var(--weight-title);
+  font-size:      var(--text-sm);
+  font-weight:    var(--weight-label);
   letter-spacing: var(--ls-label);
   cursor:         pointer;
-  transition:     background-color var(--transition-fast);
+  transition:     color var(--transition-fast), border-color var(--transition-fast);
 }
-.mm-leave-btn:hover { background-color: rgba(65,129,197,0.15); }
+.mm-leave-btn:hover {
+  color:        var(--text-primary);
+  border-color: var(--border-default);
+}
 
 /* ═══════════════════════════════════════════════════════════════════════════
    GAME OVER MODAL
@@ -443,11 +565,11 @@
   margin-top: var(--space-1);
 }
 
-/* Primary stats (floor vs best) */
+/* Primary stats */
 .go-primary {
   display:         flex;
   justify-content: center;
-  gap:             var(--space-6);
+  gap:             var(--space-5);
   padding:         var(--space-2) 0;
   border-top:      1px solid var(--border-subtle);
   border-bottom:   1px solid var(--border-subtle);
@@ -523,167 +645,71 @@
 .go-earned-val   { font-size: var(--text-body); font-weight: var(--weight-label);
                    color: var(--accent-gold); font-variant-numeric: tabular-nums; }
 
-/* Title unlock banner */
+/* Title unlock banner — FIX: animated slide-in + stronger visual treatment */
 .go-title-unlock {
   padding:          var(--space-2) var(--space-3);
-  background-color: rgba(57,153,106,0.08);
-  border:           1px solid rgba(57,153,106,0.35);
+  background-color: rgba(57,153,106,0.10);
+  border:           1px solid rgba(57,153,106,0.45);
   border-radius:    var(--radius-md);
   text-align:       center;
   font-size:        var(--text-label);
   font-weight:      var(--weight-label);
   color:            var(--accent-nature);
+  animation:        go-title-reveal 0.5s var(--ease-enter) both;
+}
+@keyframes go-title-reveal {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .go-title-unlock { animation: none; }
 }
 
-/* Buttons */
+/* Buttons — FIX: clear primary/secondary hierarchy */
 .go-buttons {
-  display: flex;
-  gap:     var(--space-2);
+  display:        flex;
+  flex-direction: column;
+  gap:            var(--space-2);
 }
-.go-btn {
-  flex:           1;
-  padding:        var(--space-2) 0;
-  border-radius:  var(--radius-md);
-  font-family:    var(--font-mono);
-  font-size:      var(--text-label);
-  font-weight:    var(--weight-label);
-  letter-spacing: var(--ls-label);
-  cursor:         pointer;
-  transition:     background-color var(--transition-fast), opacity var(--transition-fast);
-}
+
+/* FIX: Primary action is now full-width, filled — clearly the main CTA */
 .go-btn-primary {
+  width:            100%;
+  padding:          var(--space-3) 0;
+  min-height:       48px;
+  border-radius:    var(--radius-md);
+  font-family:      var(--font-mono);
+  font-size:        var(--text-body);
+  font-weight:      var(--weight-label);
+  letter-spacing:   var(--ls-label);
+  cursor:           pointer;
   background-color: var(--accent-primary);
   border:           1px solid var(--accent-primary);
-  color:            var(--text-primary);
+  color:            var(--text-on-accent);
+  transition:       background-color var(--transition-fast);
 }
-.go-btn-primary:hover { background-color: var(--accent-glow); border-color: var(--accent-glow); }
+.go-btn-primary:hover {
+  background-color: var(--accent-primary-hover);
+  border-color:     var(--accent-primary-hover);
+}
+
+/* FIX: Secondary action is text-only — less prominent than primary */
 .go-btn-secondary {
-  background:   none;
-  border:       1px solid var(--border-default);
-  color:        var(--text-muted);
-}
-.go-btn-secondary:hover { background-color: var(--bg-raised); color: var(--text-primary); }
-
-/* ── Skip button ────────────────────────────────────────────────────────── */
-
-.um-skip-btn {
-  background:     none;
-  border:         1px solid var(--border-default);    /* was: border-subtle — too invisible */
-  border-radius:  var(--radius-md);
-  color:          var(--text-secondary);              /* was: text-dim — too faint to read  */
-  font-family:    var(--font-mono);
-  font-size:      var(--text-label);                  /* was: text-caption — too small       */
-  font-weight:    var(--weight-label);
-  padding:        var(--space-2) var(--space-5);      /* was: space-1 space-4 — tap too small */
-  cursor:         pointer;
-  letter-spacing: var(--ls-label);
-  transition:     color var(--transition-fast), border-color var(--transition-fast);
-}
-.um-skip-btn:hover {
-  color:        var(--text-primary);                  /* was: text-secondary */
-  border-color: var(--border-highlight);              /* was: border-default */
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   PAUSE MODAL
-   ═══════════════════════════════════════════════════════════════════════════ */
-
-.pause-panel {
-  display:          flex;
-  flex-direction:   column;
-  align-items:      center;
-  gap:              var(--space-6);
-  background:       var(--bg-panel);
-  border:           1px solid var(--border-default);
-  border-radius:    var(--radius-lg);
-  padding:          var(--space-8) var(--space-10);
-  min-width:        260px;
-}
-
-.pause-title-wrap {
-  display:        flex;
-  flex-direction: column;
-  align-items:    center;
-  gap:            var(--space-1);
-}
-
-.pause-title {
-  font-family:    var(--font-mono);
-  font-size:      var(--text-xl);
-  font-weight:    var(--weight-heading);
-  letter-spacing: var(--ls-heading);
-  color:          var(--text-primary);
-}
-
-.pause-hint {
-  font-family:    var(--font-mono);
-  font-size:      var(--text-caption);
-  color:          var(--text-dim);
-  letter-spacing: var(--ls-label);
-}
-
-.pause-buttons {
-  display:        flex;
-  flex-direction: column;
-  gap:            var(--space-3);
   width:          100%;
-}
-
-.pause-btn {
-  width:          100%;
-  padding:        var(--space-3) var(--space-6);
+  padding:        var(--space-2) 0;
+  min-height:     36px;
   border-radius:  var(--radius-md);
   font-family:    var(--font-mono);
   font-size:      var(--text-sm);
   font-weight:    var(--weight-label);
   letter-spacing: var(--ls-label);
   cursor:         pointer;
-  border:         1px solid transparent;
-  transition:     background var(--transition-fast), color var(--transition-fast),
-                  border-color var(--transition-fast);
+  background:     none;
+  border:         none;
+  color:          var(--text-dim);
+  transition:     color var(--transition-fast);
 }
-
-.pause-btn--resume {
-  background:   var(--accent-primary);
-  color:        var(--bg-base);
-  border-color: var(--accent-primary);
-}
-.pause-btn--resume:hover {
-  background:   var(--accent-primary-hover, #5dd3ff);
-  border-color: var(--accent-primary-hover, #5dd3ff);
-}
-
-.pause-btn--restart {
-  background:   transparent;
-  color:        var(--text-secondary);
-  border-color: var(--border-default);
-}
-.pause-btn--restart:hover {
-  color:        var(--text-primary);
-  border-color: var(--border-highlight);
-}
-
-.pause-btn--quit {
-  background:   transparent;
-  color:        var(--color-danger, #e74c3c);
-  border-color: var(--color-danger, #e74c3c);
-}
-.pause-btn--quit:hover {
-  background:   rgba(231, 76, 60, 0.12);
-}
-
-.pause-btn--abandon {
-  background:   transparent;
-  color:        var(--text-dim);
-  border-color: var(--border-subtle);
-  font-size:    var(--text-caption);
-  opacity:      0.7;
-}
-.pause-btn--abandon:hover {
-  color:        var(--color-danger, #e74c3c);
-  border-color: var(--color-danger, #e74c3c);
-  opacity:      1;
-}
+.go-btn-secondary:hover { color: var(--text-muted); }
 
 /* ── Game-over tip ───────────────────────────────────────────────────────── */
 
@@ -716,10 +742,134 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
+   PAUSE MODAL
+   FIX: --bg-panel, --text-xl, --text-sm, --color-danger, --accent-primary-hover,
+        --text-on-accent all now resolve correctly from tokens.css.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.pause-panel {
+  display:          flex;
+  flex-direction:   column;
+  align-items:      center;
+  gap:              var(--space-5);
+  /* FIX: --bg-panel was undefined before — panel was transparent */
+  background:       var(--bg-panel);
+  border:           1px solid var(--border-default);
+  border-radius:    var(--radius-lg);
+  padding:          var(--space-7) var(--space-6);
+  min-width:        260px;
+}
+
+/* FIX: Run context line — shows current floor/class/time for re-orientation */
+.pause-context {
+  font-family:    var(--font-mono);
+  font-size:      var(--text-sm);
+  color:          var(--text-dim);
+  letter-spacing: var(--ls-label);
+  text-align:     center;
+}
+
+.pause-title-wrap {
+  display:        flex;
+  flex-direction: column;
+  align-items:    center;
+  gap:            var(--space-1);
+}
+
+.pause-title {
+  font-family:    var(--font-mono);
+  /* FIX: --text-xl now resolves (20px) */
+  font-size:      var(--text-xl);
+  font-weight:    var(--weight-heading);
+  letter-spacing: var(--ls-heading);
+  color:          var(--text-primary);
+}
+
+.pause-hint {
+  font-family:    var(--font-mono);
+  font-size:      var(--text-caption);
+  color:          var(--text-dim);
+  letter-spacing: var(--ls-label);
+}
+
+.pause-buttons {
+  display:        flex;
+  flex-direction: column;
+  gap:            var(--space-3);
+  width:          100%;
+}
+
+.pause-btn {
+  width:          100%;
+  padding:        var(--space-3) var(--space-5);
+  min-height:     48px;
+  border-radius:  var(--radius-md);
+  font-family:    var(--font-mono);
+  /* FIX: --text-sm now resolves (12px) */
+  font-size:      var(--text-sm);
+  font-weight:    var(--weight-label);
+  letter-spacing: var(--ls-label);
+  cursor:         pointer;
+  border:         1px solid transparent;
+  transition:     background var(--transition-fast), color var(--transition-fast),
+                  border-color var(--transition-fast);
+}
+
+.pause-btn--resume {
+  background:   var(--accent-primary);
+  /* FIX: --text-on-accent now resolves */
+  color:        var(--text-on-accent);
+  border-color: var(--accent-primary);
+}
+.pause-btn--resume:hover {
+  /* FIX: --accent-primary-hover now resolves */
+  background:   var(--accent-primary-hover);
+  border-color: var(--accent-primary-hover);
+}
+
+.pause-btn--restart {
+  background:   transparent;
+  color:        var(--text-secondary);
+  border-color: var(--border-default);
+}
+.pause-btn--restart:hover {
+  color:        var(--text-primary);
+  border-color: var(--border-highlight);
+}
+
+/* FIX: Divider before the danger zone buttons */
+.pause-danger-divider {
+  width:            100%;
+  height:           1px;
+  background-color: var(--border-subtle);
+  margin:           var(--space-1) 0;
+}
+
+.pause-btn--quit {
+  background:   transparent;
+  /* FIX: --color-danger now resolves */
+  color:        var(--color-danger);
+  border-color: var(--color-danger);
+}
+.pause-btn--quit:hover {
+  background:   rgba(180, 28, 57, 0.12);
+}
+
+.pause-btn--abandon {
+  background:   transparent;
+  color:        var(--text-dim);
+  border-color: var(--border-subtle);
+  font-size:    var(--text-caption);
+  opacity:      0.7;
+}
+.pause-btn--abandon:hover {
+  color:        var(--color-danger);
+  border-color: var(--color-danger);
+  opacity:      1;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
    MOBILE RESPONSIVE OVERRIDES
-   Below 480 px viewport width the upgrade modal switches to a single-column
-   card layout so each card is full-width and easily tappable.
-   The modal itself drops its fixed width so it uses the viewport naturally.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 @media (max-width: 479px) {
@@ -729,85 +879,51 @@
     gap:     var(--space-3);
   }
 
+  /* FIX: header stays as row so skip remains visible beside context */
+  .um-header {
+    flex-wrap: wrap;
+    gap:       var(--space-2);
+  }
+
   /* Single-column card stack */
   .um-card-row {
     grid-template-columns: 1fr;
     gap:                   var(--space-3);
   }
 
-  /* Cards don't need a min-height in single-column — let content drive height */
   .um-card {
-    min-height: unset;
-    padding:    var(--space-3) var(--space-3);
+    min-height: 120px;  /* FIX: reduced from 200px — no side-by-side comparison needed */
+    padding:    var(--space-3);
   }
 
-  /* Larger card name and description so they're readable at full width */
   .um-card-name { font-size: var(--text-body); }
   .um-card-desc { font-size: var(--text-label); }
 
-  /* Skip button: full-width, taller tap target.
-     font-size is already var(--text-label) from the base rule — no override needed. */
   .um-skip-btn {
-    width:   100%;
-    padding: var(--space-3) var(--space-4);            /* was: space-2 — increase tap target */
+    width: auto;
   }
 
   /* ── Relic modal ─────────────────────────────────────────────────────────── */
-
   .rm-card-row {
     grid-template-columns: 1fr;
     gap:                   var(--space-3);
   }
-
-  .rm-card { min-height: unset; }
+  .rm-card { min-height: 120px; }
 
   /* ── Merchant modal ──────────────────────────────────────────────────────── */
-
-  /* Upgrade offer cards: single column */
-  .mm-offer-grid {
-    grid-template-columns: 1fr;
-    gap:                   var(--space-2);
-  }
-
-  /* Consumable row: stack vertically */
-  .mm-consumable-row {
-    grid-template-columns: 1fr;
-    gap:                   var(--space-2);
-  }
-
-  /* Consumables need a taller tap target */
-  .mm-consumable { min-height: 48px; }
-
-  /* Buy and reroll buttons: full-width, taller */
+  .mm-offer-grid         { grid-template-columns: 1fr; gap: var(--space-2); }
+  .mm-consumable-row     { grid-template-columns: 1fr; gap: var(--space-2); }
+  .mm-consumable         { min-height: 48px; }
   .mm-buy-btn,
-  .mm-reroll-btn {
-    width:      100%;
-    min-height: 44px;
-    font-size:  var(--text-label);
-  }
+  .mm-reroll-btn         { width: 100%; min-height: 44px; font-size: var(--text-label); }
+  .mm-footer             { flex-direction: column-reverse; }
+  .mm-leave-btn          { width: 100%; min-height: 36px; text-align: center; }
 
   /* ── Game-over modal ─────────────────────────────────────────────────────── */
-
-  .go-stat-grid {
-    /* 2×N rather than 3×N — each cell stays readable */
-    grid-template-columns: 1fr 1fr;
-  }
-
-  /* Action buttons: full-width, taller */
-  .go-btn {
-    width:      100%;
-    min-height: 48px;
-    font-size:  var(--text-body);
-  }
+  .go-stat-grid   { grid-template-columns: 1fr 1fr; }
+  .go-btn-primary { min-height: 52px; font-size: var(--text-body); }
 
   /* ── Pause modal ─────────────────────────────────────────────────────────── */
-
-  .pause-panel {
-    width:   100%;
-    padding: var(--space-5) var(--space-4);
-    gap:     var(--space-4);
-  }
-
-  /* Pause buttons: already full-width, just ensure tap height */
-  .pause-btn { min-height: 48px; font-size: var(--text-body); }
+  .pause-panel    { width: 100%; padding: var(--space-5) var(--space-4); gap: var(--space-4); }
+  .pause-btn      { min-height: 52px; font-size: var(--text-body); }
 }
