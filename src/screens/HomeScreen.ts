@@ -1,16 +1,18 @@
 /**
  * HomeScreen.ts — HTML replacement for HomeScene.
  *
- * Registered with the router under 'home'.
- * Renders into #screen-root as a 480×640 fixed panel centred in the viewport.
- *
- * Tabs: PLAY | RANKS | PROFILE | SETTINGS
- *
- * Data sources (no Phaser / bus needed):
- *   - ServiceLocator.profile.getProfile()
- *   - ServiceLocator.history.getRecentRuns()
- *   - metaService (currency, upgrades, lastRun)
- *   - MODES_REGISTRY
+ * CHANGES:
+ *   - TabId: 'ranks' renamed to 'history' (more accurate label).
+ *   - buildTabNav(): SHOP removed — it is navigation not a tab.
+ *     Now lives in the header as .hs-header-shop.
+ *   - buildHeader(): right side restructured into .hs-header-right
+ *     containing currency chip + SHOP link button.
+ *   - buildPlayPane(): last-run reentry card moved to TOP of pane
+ *     with a PLAY AGAIN button as re-engagement hook.
+ *   - buildHistoryPane() (was buildRanksPane()): VIEW LEADERBOARD
+ *     link added at the bottom.
+ *   - Settings RENAME now passes { rename: true } to name-entry route.
+ *   - Keyboard binds list updated to include M key (pause).
  */
 
 import { ServiceLocator }                    from '../services/ServiceLocator';
@@ -20,19 +22,11 @@ import { MODES_REGISTRY, GameModeConfig }    from '../modes/GameModeConfig';
 import { router }                            from '../router/Router';
 import { startRun }                          from '../bridge/startRun';
 
-// ---------------------------------------------------------------------------
-// Factory — registered with the router
-// ---------------------------------------------------------------------------
-
 export function createHomeScreen(): HTMLElement {
   return new HomeScreen().el;
 }
 
-// ---------------------------------------------------------------------------
-// HomeScreen class
-// ---------------------------------------------------------------------------
-
-type TabId = 'play' | 'ranks' | 'profile' | 'settings';
+type TabId = 'play' | 'history' | 'profile' | 'settings';
 
 class HomeScreen {
   readonly el: HTMLElement;
@@ -46,15 +40,13 @@ class HomeScreen {
     this.showTab('play');
   }
 
-  // ── Root shell ─────────────────────────────────────────────────────────────
-
   private build(): HTMLElement {
     const root = el('div', 'home-screen');
     root.append(
       this.buildHeader(),
       this.buildTabNav(),
       this.buildTabContent('play',     () => this.buildPlayPane()),
-      this.buildTabContent('ranks',    () => this.buildRanksPane()),
+      this.buildTabContent('history',  () => this.buildHistoryPane()),
       this.buildTabContent('profile',  () => this.buildProfilePane()),
       this.buildTabContent('settings', () => this.buildSettingsPane()),
     );
@@ -66,47 +58,46 @@ class HomeScreen {
   private buildHeader(): HTMLElement {
     const header = el('div', 'hs-header');
 
-    // Game title
     const title = el('span', 'hs-title');
     title.textContent = 'THE SPIRE';
 
-    // Player name + streak
     const profile  = ServiceLocator.profile.getProfile();
     const name     = profile?.name ?? 'Player';
     const streak   = (profile?.current_streak ?? 0) > 1
-      ? `  🔥${profile!.current_streak}` : '';
+      ? `  \u{1F525}${profile!.current_streak}` : '';
     const nameEl   = el('span', 'hs-player-name');
     nameEl.textContent = `${name}${streak}`;
     nameEl.addEventListener('click', () => this.showTab('profile'));
 
-    // Currency chip
-    this.currencyEl = el('span', 'hs-currency');
-    this.currencyEl.textContent = `★ ${metaService.currency}`;
+    const right = el('div', 'hs-header-right');
 
-    header.append(title, nameEl, this.currencyEl);
+    this.currencyEl = el('span', 'hs-currency');
+    this.currencyEl.textContent = '\u2605 ' + metaService.currency;
+
+    const shopBtn = el('button', 'hs-header-shop');
+    shopBtn.textContent = 'SHOP';
+    shopBtn.addEventListener('click', () => router.navigate('shop'));
+
+    right.append(this.currencyEl, shopBtn);
+    header.append(title, nameEl, right);
     return header;
   }
 
   // ── Tab nav ────────────────────────────────────────────────────────────────
 
   private buildTabNav(): HTMLElement {
-    const nav  = el('nav', 'hs-tab-nav');
-    const tabs: TabId[] = ['play', 'ranks', 'profile', 'settings'];
-    const labels = ['PLAY', 'RANKS', 'PROFILE', 'SETTINGS'];
+    const nav = el('nav', 'hs-tab-nav');
+    const tabs:   TabId[] = ['play', 'history', 'profile', 'settings'];
+    const labels           = ['PLAY', 'HISTORY', 'PROFILE', 'SETTINGS'];
 
     tabs.forEach((id, i) => {
       const btn = el('button', 'hs-tab-btn');
-      btn.textContent = labels[i];
+      btn.textContent    = labels[i];
       btn.dataset['tab'] = id;
       btn.addEventListener('click', () => this.showTab(id));
       this.tabBtns.set(id, btn);
       nav.appendChild(btn);
     });
-
-    const shopBtn = el('button', 'hs-tab-btn');
-    shopBtn.textContent = 'SHOP';
-    shopBtn.addEventListener('click', () => router.navigate('shop'));
-    nav.appendChild(shopBtn);
 
     return nav;
   }
@@ -120,12 +111,8 @@ class HomeScreen {
   }
 
   private showTab(id: TabId): void {
-    this.tabs.forEach((pane, key) => {
-      pane.classList.toggle('is-active', key === id);
-    });
-    this.tabBtns.forEach((btn, key) => {
-      btn.classList.toggle('is-active', key === id);
-    });
+    this.tabs.forEach((pane, key) => pane.classList.toggle('is-active', key === id));
+    this.tabBtns.forEach((btn, key) => btn.classList.toggle('is-active', key === id));
   }
 
   // ── PLAY tab ───────────────────────────────────────────────────────────────
@@ -133,29 +120,49 @@ class HomeScreen {
   private buildPlayPane(): HTMLElement {
     const pane = el('div', 'hs-play-pane');
 
-    // Mode cards section
-    const modesLabel = sectionLabel('GAME MODES');
+    const lastRun = metaService.lastRun;
+    if (lastRun) {
+      pane.appendChild(
+        this.buildReentryCard(lastRun.floor, lastRun.kills, lastRun.bossesDefeated),
+      );
+    }
+
+    pane.appendChild(sectionLabel('GAME MODES'));
     const grid = el('div', 'hs-mode-grid');
     MODES_REGISTRY.forEach(mode => grid.appendChild(this.buildModeCard(mode)));
-    pane.append(modesLabel, grid);
+    pane.appendChild(grid);
 
-    // Permanent upgrades section
-    const upgradesLabel = sectionLabel('PERMANENT UPGRADES');
+    pane.appendChild(sectionLabel('PERMANENT UPGRADES'));
     const upgradeList = el('div', 'hs-upgrade-list');
-
     UPGRADE_INFO.forEach(info => {
       upgradeList.appendChild(this.buildUpgradeRow(info.key, info.label, info.color));
     });
-
-    pane.append(upgradesLabel, upgradeList);
-
-    // Last run preview
-    const lastRun = metaService.lastRun;
-    if (lastRun) {
-      pane.appendChild(this.buildLastRunCard(lastRun.floor, lastRun.kills, lastRun.bossesDefeated));
-    }
+    pane.appendChild(upgradeList);
 
     return pane;
+  }
+
+  private buildReentryCard(floor: number, kills: number, bosses: number): HTMLElement {
+    const card = el('div', 'hs-last-run hs-last-run--reentry');
+
+    const labelEl  = el('span', 'hs-last-run-label');
+    labelEl.textContent = 'LAST RUN';
+
+    const floorEl  = el('span', 'hs-last-run-floor');
+    floorEl.textContent = 'Floor ' + floor;
+
+    const detailEl = el('span', 'hs-last-run-detail');
+    detailEl.textContent = kills + ' kills \u00b7 ' + bosses + ' bosses';
+
+    const playAgain = el('button', 'hs-last-run-play-btn');
+    playAgain.textContent = 'PLAY AGAIN \u2192';
+    playAgain.addEventListener('click', () => {
+      const lastMode = ServiceLocator.history.getRecentRuns(1)[0]?.mode_id ?? 'classic';
+      router.navigate('class-select', { modeId: lastMode });
+    });
+
+    card.append(labelEl, floorEl, detailEl, playAgain);
+    return card;
   }
 
   private buildModeCard(mode: GameModeConfig): HTMLElement {
@@ -166,12 +173,11 @@ class HomeScreen {
       normal: '#2ecc71', hard: '#f39c12', extreme: '#e74c3c',
     };
 
-    // Best run stat
     const bestRun  = this.getBestRunForMode(mode.id);
     const bestStr  = bestRun
       ? mode.id === 'boss_rush'
-        ? `Best: ${bestRun.bosses_killed} bosses`
-        : `Best: Fl. ${bestRun.floor_reached}`
+        ? 'Best: ' + bestRun.bosses_killed + ' bosses'
+        : 'Best: Fl. ' + bestRun.floor_reached
       : 'No runs yet';
 
     const iconEl  = el('span', 'hs-mode-icon');   iconEl.textContent  = mode.icon;
@@ -179,7 +185,7 @@ class HomeScreen {
     const diffEl  = el('span', 'hs-mode-diff');   diffEl.textContent  = mode.difficulty.toUpperCase();
     diffEl.style.color = diffColors[mode.difficulty] ?? 'var(--text-secondary)';
     const bestEl  = el('span', 'hs-mode-best');   bestEl.textContent  = bestStr;
-    const playBtn = el('button', 'hs-mode-play');  playBtn.textContent = 'PLAY';
+    const playBtn = el('button', 'hs-mode-play'); playBtn.textContent = 'PLAY';
 
     playBtn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -197,12 +203,11 @@ class HomeScreen {
   private buildUpgradeRow(key: UpgradeKey, label: string, color: number): HTMLElement {
     const row = el('div', 'hs-upgrade-row');
 
-    const nameEl  = el('span', 'hs-upg-name');
+    const nameEl = el('span', 'hs-upg-name');
     nameEl.textContent = label;
     nameEl.style.color = intToHex(color);
 
-    // Dot progress bar
-    const dotsEl  = el('div', 'hs-upg-dots');
+    const dotsEl   = el('div', 'hs-upg-dots');
     const drawDots = () => {
       dotsEl.innerHTML = '';
       const level = metaService.upgrades[key];
@@ -215,24 +220,22 @@ class HomeScreen {
     };
     drawDots();
 
-    // Level text
-    const levelEl = el('span', 'hs-upg-level');
+    const levelEl      = el('span', 'hs-upg-level');
     const setLevelText = () => {
-      levelEl.textContent = `${metaService.upgrades[key]}/${META_MAX_LEVEL}`;
+      levelEl.textContent = metaService.upgrades[key] + '/' + META_MAX_LEVEL;
     };
     setLevelText();
 
-    // BUY button
     const buyBtn = document.createElement('button');
     buyBtn.className = 'hs-upg-buy';
     const refreshBtn = () => {
       const isMax     = metaService.isMaxLevel(key);
       const canAfford = metaService.canAfford(key);
       const cost      = metaService.costForUpgrade(key);
-      buyBtn.textContent = isMax ? 'MAX' : 'BUY';
-      buyBtn.dataset['cost'] = isMax ? '' : `${cost} ★`;
-      buyBtn.disabled = isMax || !canAfford;
-      buyBtn.classList.toggle('is-max', isMax);
+      buyBtn.textContent     = isMax ? 'MAX' : 'BUY';
+      buyBtn.dataset['cost'] = isMax ? '' : cost + ' \u2605';
+      buyBtn.disabled        = isMax || !canAfford;
+      buyBtn.classList.toggle('is-max',     isMax);
       buyBtn.classList.toggle('can-afford', canAfford && !isMax);
     };
     refreshBtn();
@@ -242,7 +245,7 @@ class HomeScreen {
         drawDots();
         setLevelText();
         refreshBtn();
-        this.currencyEl.textContent = `★ ${metaService.currency}`;
+        this.currencyEl.textContent = '\u2605 ' + metaService.currency;
       }
     });
 
@@ -250,20 +253,9 @@ class HomeScreen {
     return row;
   }
 
-  private buildLastRunCard(floor: number, kills: number, bosses: number): HTMLElement {
-    const card = el('div', 'hs-last-run');
+  // ── HISTORY tab ────────────────────────────────────────────────────────────
 
-    const labelEl  = el('span', 'hs-last-run-label');  labelEl.textContent  = 'LAST RUN';
-    const floorEl  = el('span', 'hs-last-run-floor');  floorEl.textContent  = `Floor ${floor}`;
-    const detailEl = el('span', 'hs-last-run-detail'); detailEl.textContent = `${kills} kills · ${bosses} bosses`;
-
-    card.append(labelEl, floorEl, detailEl);
-    return card;
-  }
-
-  // ── RANKS tab ──────────────────────────────────────────────────────────────
-
-  private buildRanksPane(): HTMLElement {
+  private buildHistoryPane(): HTMLElement {
     const pane = el('div', 'hs-ranks-pane');
     pane.appendChild(sectionLabel('PERSONAL BESTS'));
 
@@ -274,38 +266,45 @@ class HomeScreen {
       const empty = el('p', 'hs-empty');
       empty.textContent = 'Complete a run to see your records.';
       pane.appendChild(empty);
-      return pane;
+    } else {
+      const table = el('div', 'hs-ranks-table');
+
+      const hdr = el('div', 'hs-ranks-row hs-ranks-hdr');
+      ['MODE', 'STAT', 'BUILD', 'DATE'].forEach(col => {
+        const c = el('span'); c.textContent = col; hdr.appendChild(c);
+      });
+      table.appendChild(hdr);
+
+      bestByMode.forEach(({ mode, run }) => {
+        const row = el('div', 'hs-ranks-row');
+        row.style.setProperty('--mode-color', intToHex(mode.color));
+
+        const statVal = mode.id === 'boss_rush'
+          ? (run.bosses_killed ?? 0) + ' BO'
+          : run.floor_reached + ' FL';
+
+        const dateStr = new Date(run.date).toLocaleDateString('en-GB', {
+          month: 'short', day: 'numeric',
+        });
+
+        const modeEl  = el('span', 'hs-ranks-mode');  modeEl.textContent  = mode.icon + '  ' + mode.name;
+        const statEl  = el('span', 'hs-ranks-stat');  statEl.textContent  = statVal;
+        const buildEl = el('span', 'hs-ranks-build'); buildEl.textContent = run.build_archetype;
+        const dateEl  = el('span', 'hs-ranks-date');  dateEl.textContent  = dateStr;
+
+        row.append(modeEl, statEl, buildEl, dateEl);
+        table.appendChild(row);
+      });
+
+      pane.appendChild(table);
     }
 
-    const table = el('div', 'hs-ranks-table');
+    const lbBtn = el('button', 'hs-stats-btn');
+    lbBtn.textContent = 'FULL RUN HISTORY  \u2192';
+    lbBtn.style.marginTop = 'auto';
+    lbBtn.addEventListener('click', () => router.navigate('leaderboard'));
+    pane.appendChild(lbBtn);
 
-    // Header
-    const hdr = el('div', 'hs-ranks-row hs-ranks-hdr');
-    ['MODE', 'STAT', 'BUILD', 'DATE'].forEach(col => {
-      const c = el('span'); c.textContent = col; hdr.appendChild(c);
-    });
-    table.appendChild(hdr);
-
-    bestByMode.forEach(({ mode, run }) => {
-      const row = el('div', 'hs-ranks-row');
-      row.style.setProperty('--mode-color', intToHex(mode.color));
-
-      const statVal = mode.id === 'boss_rush'
-        ? `${run.bosses_killed ?? 0} BO`
-        : `${run.floor_reached} FL`;
-
-      const dateStr = new Date(run.date).toLocaleDateString('en-GB', { month: 'short', day: 'numeric' });
-
-      const modeEl  = el('span', 'hs-ranks-mode');  modeEl.textContent  = `${mode.icon}  ${mode.name}`;
-      const statEl  = el('span', 'hs-ranks-stat');  statEl.textContent  = statVal;
-      const buildEl = el('span', 'hs-ranks-build'); buildEl.textContent = run.build_archetype;
-      const dateEl  = el('span', 'hs-ranks-date');  dateEl.textContent  = dateStr;
-
-      row.append(modeEl, statEl, buildEl, dateEl);
-      table.appendChild(row);
-    });
-
-    pane.appendChild(table);
     return pane;
   }
 
@@ -321,30 +320,29 @@ class HomeScreen {
       return pane;
     }
 
-    // Name card
     const card = el('div', 'hs-profile-card');
     const nameEl = el('div', 'hs-profile-name'); nameEl.textContent = profile.name;
 
-    const streak = profile.current_streak > 1 ? `  🔥 ${profile.current_streak}-day streak` : '';
+    const streak = profile.current_streak > 1
+      ? '  \u{1F525} ' + profile.current_streak + '-day streak' : '';
     const subEl  = el('div', 'hs-profile-sub');
-    subEl.textContent = `${profile.total_runs} runs · Best fl. ${profile.highest_floor}${streak}`;
+    subEl.textContent = profile.total_runs + ' runs \u00b7 Best fl. ' + profile.highest_floor + streak;
 
     card.append(nameEl, subEl);
 
     const titleEl = el('span', 'hs-profile-title');
     if (profile.active_title) {
-      titleEl.textContent = `[${profile.active_title}]`;
+      titleEl.textContent = '[' + profile.active_title + ']';
       card.appendChild(titleEl);
     }
     pane.appendChild(card);
 
-    // Quick stats grid
     const grid = el('div', 'hs-profile-stats');
     const stats: Array<[string, string]> = [
-      ['WINS',   `${profile.wins}`],
-      ['KILLS',  `${profile.total_kills.toLocaleString()}`],
-      ['BOSSES', `${profile.total_bosses_killed}`],
-      ['STREAK', `${profile.best_streak} days`],
+      ['WINS',   String(profile.wins)],
+      ['KILLS',  profile.total_kills.toLocaleString()],
+      ['BOSSES', String(profile.total_bosses_killed)],
+      ['STREAK', profile.best_streak + ' days'],
     ];
     stats.forEach(([label, val]) => {
       const cell  = el('div', 'hs-stat-cell');
@@ -355,11 +353,11 @@ class HomeScreen {
     });
     pane.appendChild(grid);
 
-    // Titles
     pane.appendChild(sectionLabel('TITLES EARNED'));
     const titles = el('div', 'hs-titles');
     if (profile.unlocked_titles.length === 0) {
-      const empty = el('span', 'hs-empty'); empty.textContent = 'Complete a run to earn your first title.';
+      const empty = el('span', 'hs-empty');
+      empty.textContent = 'Complete a run to earn your first title.';
       titles.appendChild(empty);
     } else {
       const hint = el('div', 'hs-title-hint');
@@ -375,9 +373,10 @@ class HomeScreen {
           if (id === profile.active_title) return;
           ServiceLocator.profile.updateProfile({ active_title: id });
           profile.active_title = id;
-          titleEl.textContent = `[${id}]`;
+          titleEl.textContent = '[' + id + ']';
           if (!card.contains(titleEl)) card.appendChild(titleEl);
-          titles.querySelectorAll('.hs-title-chip').forEach((el) => el.classList.remove('is-active'));
+          titles.querySelectorAll('.hs-title-chip').forEach(e =>
+            e.classList.remove('is-active'));
           chip.classList.add('is-active');
         });
 
@@ -386,9 +385,8 @@ class HomeScreen {
     }
     pane.appendChild(titles);
 
-    // Stats button
     const statsBtn = el('button', 'hs-stats-btn');
-    statsBtn.textContent = 'FULL PROFILE & STATISTICS  →';
+    statsBtn.textContent = 'FULL PROFILE & STATISTICS  \u2192';
     statsBtn.addEventListener('click', () => router.navigate('stats'));
     pane.appendChild(statsBtn);
 
@@ -401,24 +399,22 @@ class HomeScreen {
     const pane = el('div', 'hs-settings-pane');
     pane.appendChild(sectionLabel('SETTINGS'));
 
-    // Rename
     const renameRow = this.buildSettingsRow(
       'Change Name',
       'Opens name entry to change your display name',
-      'RENAME →',
+      'RENAME \u2192',
       () => {
         ServiceLocator.profile.reset();
-        router.navigate('name-entry');
+        router.navigate('name-entry', { rename: true });
       },
     );
     pane.appendChild(renameRow);
 
-    // Reset save
     let resetPending = false;
     const resetRow = this.buildSettingsRow(
       'Reset All Data',
       'Clears all progress, currency and statistics',
-      'RESET →',
+      'RESET \u2192',
       (btn) => {
         if (resetPending) {
           metaService.resetSave();
@@ -427,28 +423,25 @@ class HomeScreen {
           router.navigate('name-entry');
         } else {
           resetPending = true;
-          btn.textContent = 'TAP AGAIN →';
-          setTimeout(() => {
-            resetPending = false;
-            btn.textContent = 'RESET →';
-          }, 3000);
+          btn.textContent = 'TAP AGAIN \u2192';
+          setTimeout(() => { resetPending = false; btn.textContent = 'RESET \u2192'; }, 3000);
         }
       },
       true,
     );
     pane.appendChild(resetRow);
 
-    // Controls
     pane.appendChild(sectionLabel('CONTROLS'));
     const binds: Array<[string, string]> = [
       ['B',       'Build overview (during run)'],
       ['Tab',     'Stats panel (during run)'],
+      ['M',       'Pause menu (during run)'],
       ['ESC / B', 'Back (menus)'],
     ];
     const bindList = el('div', 'hs-bind-list');
     binds.forEach(([key, desc]) => {
       const row    = el('div', 'hs-bind-row');
-      const keyEl  = el('span', 'hs-bind-key');  keyEl.textContent  = `[${key}]`;
+      const keyEl  = el('span', 'hs-bind-key');  keyEl.textContent  = '[' + key + ']';
       const descEl = el('span', 'hs-bind-desc'); descEl.textContent = desc;
       row.append(keyEl, descEl);
       bindList.appendChild(row);
@@ -459,14 +452,14 @@ class HomeScreen {
   }
 
   private buildSettingsRow(
-    title: string,
-    desc:  string,
+    title:    string,
+    desc:     string,
     btnLabel: string,
     onClick:  (btn: HTMLElement) => void,
     danger = false,
   ): HTMLElement {
-    const row    = el('div', 'hs-settings-row');
-    const info   = el('div', 'hs-settings-info');
+    const row     = el('div', 'hs-settings-row');
+    const info    = el('div', 'hs-settings-info');
     const titleEl = el('div', 'hs-settings-title'); titleEl.textContent = title;
     if (danger) titleEl.classList.add('is-danger');
     const descEl  = el('div', 'hs-settings-desc');  descEl.textContent  = desc;
@@ -506,15 +499,9 @@ class HomeScreen {
   }
 }
 
-// ---------------------------------------------------------------------------
-// DOM helpers
-// ---------------------------------------------------------------------------
-
 function el(tag: string, className?: string): HTMLElement {
   const e = document.createElement(tag);
-  if (className) {
-    className.split(' ').forEach(c => c && e.classList.add(c));
-  }
+  if (className) className.split(' ').forEach(c => c && e.classList.add(c));
   return e;
 }
 
@@ -525,5 +512,5 @@ function sectionLabel(text: string): HTMLElement {
 }
 
 function intToHex(color: number): string {
-  return `#${color.toString(16).padStart(6, '0')}`;
+  return '#' + color.toString(16).padStart(6, '0');
 }

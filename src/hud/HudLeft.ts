@@ -1,9 +1,13 @@
 /**
  * HudLeft — top bar (floor, class badge, speed buttons) + player HP panel + bottom bar.
  *
- * Subscribes to:
- *   floor, playerHp, playerMaxHp, playerLevel, playerXp,
- *   gold, gameSpeed, className, classId
+ * CHANGES:
+ *   - buildBottomBar(): restructured from 7 absolute-positioned elements into
+ *     two flex zones (resources left / actions right) matching new hud.css layout.
+ *     XP bar is now a 3px full-width strip at the top edge of the bar.
+ *     Level badge moves into the gold row alongside the gold value.
+ *   - Removed standalone hud-gold-label (label implicit in new layout).
+ *   - BUILD/STATS buttons now toggle .is-active so CSS reflects open-panel state.
  */
 
 import { runState } from '../bridge/RunStateStore';
@@ -23,21 +27,17 @@ export class HudLeft {
   private xpFill!:    HTMLElement;
   private xpLevel!:   HTMLElement;
 
+  private buildBtn!:     HTMLElement;
+  private statsBtn!:     HTMLElement;
+  private buildPanelOpen = false;
+  private statsPanelOpen = false;
+
   private subs: Array<() => void> = [];
 
   constructor(frame: HTMLElement) {
-    // Top bar
-    const topbar = this.buildTopBar();
-    frame.appendChild(topbar);
-
-    // Player HP panel (left)
-    const hpPanel = this.buildPlayerHpPanel();
-    frame.appendChild(hpPanel);
-
-    // Bottom bar
-    const botbar = this.buildBottomBar();
-    frame.appendChild(botbar);
-
+    frame.appendChild(this.buildTopBar());
+    frame.appendChild(this.buildPlayerHpPanel());
+    frame.appendChild(this.buildBottomBar());
     this.subscribe();
   }
 
@@ -45,31 +45,26 @@ export class HudLeft {
     this.subs.forEach(off => off());
   }
 
-  // ── DOM builders ────────────────────────────────────────────────────────
+  // ── DOM builders ─────────────────────────────────────────────────────────
 
   private buildTopBar(): HTMLElement {
     const bar = el('div', 'hud-topbar');
 
-    // Floor label
     this.floorLabel = el('div', 'hud-floor-label');
     this.floorLabel.textContent = 'Floor 1';
     bar.appendChild(this.floorLabel);
 
-    // Class badge
     this.classBadge = el('div', 'hud-class-badge');
     bar.appendChild(this.classBadge);
 
-    // Speed buttons
     const speedWrap = el('div', 'hud-speed-btns');
     const speeds: Array<1 | 1.5 | 2> = [1, 1.5, 2];
-    const labels = ['1×', '1.5×', '2×'];
+    const labels = ['1x', '1.5x', '2x'];
     speeds.forEach((speed, i) => {
       const btn = el('div', 'hud-speed-btn');
       btn.textContent = labels[i];
       btn.dataset['speed'] = String(speed);
-      btn.addEventListener('click', () => {
-        bus.emit({ type: 'speed:change', payload: { speed } });
-      });
+      btn.addEventListener('click', () => bus.emit({ type: 'speed:change', payload: { speed } }));
       this.speedBtns.push(btn);
       speedWrap.appendChild(btn);
     });
@@ -81,19 +76,15 @@ export class HudLeft {
   private buildPlayerHpPanel(): HTMLElement {
     const panel = el('div', 'hud-hp-panel hud-hp-panel--player');
 
-    // Accent bar (player blue)
     const accent = el('div', 'hud-hp-accent');
     accent.style.background = '#4fc3f7';
 
-    // Name label
     const name = el('div', 'hud-hp-name');
     name.textContent = 'PLAYER';
     name.style.color = '#4fc3f7';
 
-    // Value
     this.hpValue = el('div', 'hud-hp-value');
 
-    // Bar track + fill
     const track = el('div', 'hud-hp-track');
     this.hpFill  = el('div', 'hud-hp-fill');
     this.hpFill.style.background = '#2ecc71';
@@ -106,60 +97,75 @@ export class HudLeft {
   private buildBottomBar(): HTMLElement {
     const bar = el('div', 'hud-botbar');
 
-    this.goldText = el('div', 'hud-gold');
-    this.goldText.textContent = '★ 0';
-
-    const goldLabel = el('div', 'hud-gold-label');
-    goldLabel.textContent = 'GOLD';
-
-    const kbHints = el('div', 'hud-kb-hints');
-
-    const buildBtn = el('button', 'hud-action-btn');
-    buildBtn.textContent = 'BUILD';
-    buildBtn.title = 'Toggle build overview (B)';
-    buildBtn.addEventListener('click', () => bus.emit({ type: 'hud:toggle-build', payload: {} }));
-
-    const statsBtn = el('button', 'hud-action-btn');
-    statsBtn.textContent = 'STATS';
-    statsBtn.title = 'Toggle stats panel (Tab)';
-    statsBtn.addEventListener('click', () => bus.emit({ type: 'hud:toggle-stats', payload: {} }));
-
-    kbHints.append(buildBtn, statsBtn);
-
-    this.relicText = el('div', 'hud-relic-text');
-    this.relicText.textContent = 'RELICS: none';
-
+    // XP strip — 3px full-width bar at the top edge of the bottom bar
     const xpTrack = el('div', 'hud-xp-track');
     this.xpFill   = el('div', 'hud-xp-fill');
     this.xpFill.style.width = '0%';
     xpTrack.appendChild(this.xpFill);
+    bar.appendChild(xpTrack);
 
-    this.xpLevel = el('div', 'hud-xp-level');
+    // Left zone: resource readouts
+    const resources = el('div', 'hud-botbar-resources');
+
+    const goldRow = el('div', 'hud-botbar-gold-row');
+    this.xpLevel  = el('div', 'hud-xp-level');
     this.xpLevel.textContent = 'Lv 0';
+    this.goldText = el('div', 'hud-gold');
+    this.goldText.textContent = '★ 0';
+    goldRow.append(this.xpLevel, this.goldText);
 
-    bar.append(goldLabel, this.goldText, kbHints, this.relicText, xpTrack, this.xpLevel);
+    this.relicText = el('div', 'hud-relic-text');
+    this.relicText.textContent = 'RELICS: none';
+
+    resources.append(goldRow, this.relicText);
+    bar.appendChild(resources);
+
+    // Vertical divider between zones
+    bar.appendChild(el('div', 'hud-botbar-divider'));
+
+    // Right zone: action buttons
+    const kbHints = el('div', 'hud-kb-hints');
+
+    this.buildBtn = el('button', 'hud-action-btn');
+    this.buildBtn.textContent = 'BUILD';
+    this.buildBtn.title = 'Toggle build overview (B)';
+    this.buildBtn.addEventListener('click', () => {
+      bus.emit({ type: 'hud:toggle-build', payload: {} });
+      this.buildPanelOpen = !this.buildPanelOpen;
+      this.buildBtn.classList.toggle('is-active', this.buildPanelOpen);
+    });
+
+    this.statsBtn = el('button', 'hud-action-btn');
+    this.statsBtn.textContent = 'STATS';
+    this.statsBtn.title = 'Toggle stats panel (Tab)';
+    this.statsBtn.addEventListener('click', () => {
+      bus.emit({ type: 'hud:toggle-stats', payload: {} });
+      this.statsPanelOpen = !this.statsPanelOpen;
+      this.statsBtn.classList.toggle('is-active', this.statsPanelOpen);
+    });
+
+    kbHints.append(this.buildBtn, this.statsBtn);
+    bar.appendChild(kbHints);
+
     return bar;
   }
 
   // ── Subscriptions ────────────────────────────────────────────────────────
 
   private subscribe(): void {
-    // Floor
     this.subs.push(
       runState.subscribe(s => s.floor, (floor) => {
         this.floorLabel.textContent = `Floor ${floor}`;
       }),
     );
 
-    // Class badge
     this.subs.push(
       runState.subscribe(s => s.className, (name) => {
-        this.classBadge.textContent = name ? `${name.toUpperCase()}` : '';
+        this.classBadge.textContent = name ? name.toUpperCase() : '';
         this.classBadge.style.display = name ? 'flex' : 'none';
       }),
     );
 
-    // Player HP
     this.subs.push(
       runState.subscribe(s => `${s.playerHp}|${s.playerMaxHp}`, () => {
         const s = runState.get();
@@ -167,38 +173,44 @@ export class HudLeft {
       }),
     );
 
-    // Gold
     this.subs.push(
       runState.subscribe(s => s.gold, (gold) => {
         this.goldText.textContent = `★ ${gold}`;
       }),
     );
 
-    // Speed — update active button highlight
     this.subs.push(
       runState.subscribe(s => s.gameSpeed, (speed) => {
         this.speedBtns.forEach(btn => {
-          const btnSpeed = Number(btn.dataset['speed']);
-          btn.classList.toggle('is-active', btnSpeed === speed);
+          btn.classList.toggle('is-active', Number(btn.dataset['speed']) === speed);
         });
       }),
     );
 
-    // XP
     this.subs.push(
       runState.subscribe(s => `${s.playerXp}|${s.playerLevel}`, () => {
         const s = runState.get();
-        const pct = Math.min(100, s.playerXp);
-        this.xpFill.style.width = `${pct}%`;
+        this.xpFill.style.width  = `${Math.min(100, s.playerXp)}%`;
         this.xpLevel.textContent = `Lv ${s.playerLevel}`;
       }),
     );
 
-    // Relic count → update relic text via secondary subscription
     this.subs.push(
       runState.subscribe(s => s.relicCount, (count) => {
         this.relicText.textContent = count === 0 ? 'RELICS: none' : `RELICS: ${count}`;
         this.relicText.style.color = count > 0 ? '#ffd700' : '#444466';
+      }),
+    );
+
+    // Reset active states when run ends
+    this.subs.push(
+      runState.subscribe(s => s.isRunActive, (active) => {
+        if (!active) {
+          this.buildPanelOpen = false;
+          this.statsPanelOpen = false;
+          this.buildBtn.classList.remove('is-active');
+          this.statsBtn.classList.remove('is-active');
+        }
       }),
     );
   }
@@ -206,13 +218,11 @@ export class HudLeft {
   private updatePlayerHp(hp: number, maxHp: number): void {
     this.hpValue.textContent = `${hp} / ${maxHp}`;
     const ratio = maxHp > 0 ? Math.max(0, Math.min(1, hp / maxHp)) : 0;
-    this.hpFill.style.width = `${Math.max(0, Math.floor(ratio * 100))}%`;
-    const col = ratio > 0.5 ? '#2ecc71' : ratio > 0.25 ? '#f39c12' : '#e74c3c';
-    this.hpFill.style.background = col;
+    this.hpFill.style.width      = `${Math.max(0, Math.floor(ratio * 100))}%`;
+    this.hpFill.style.background = ratio > 0.5 ? '#2ecc71' : ratio > 0.25 ? '#f39c12' : '#e74c3c';
   }
 }
 
-// Tiny helper — avoids repeated document.createElement boilerplate
 function el(tag: string, classes: string): HTMLElement {
   const e = document.createElement(tag);
   e.className = classes;

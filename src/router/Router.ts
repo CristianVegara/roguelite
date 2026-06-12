@@ -42,7 +42,7 @@ export interface RouteParams {
   'leaderboard':  Record<string, never>;
   'stats':        Record<string, never>;
   'settings':     Record<string, never>;
-  'name-entry':   Record<string, never>;
+  'name-entry':   { rename?: boolean };
 }
 
 interface RouteEntry {

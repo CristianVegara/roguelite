@@ -1,11 +1,13 @@
 /**
  * MobileChrome — fills the vertical dead-zone letterbox on narrow phones.
  *
- * Mobile fix: listens for modal:open / modal:close on the bus and sets
- * pointer-events: none on both fixed panels while any modal is visible.
- * The panels are position:fixed and stack independently of #modal-root,
- * so without this they intercept taps in the dead-zone area even when a
- * modal is covering the rest of the screen.
+ * CHANGES:
+ *   - Enemy name truncation raised from 7 to 10 characters — boss names
+ *     like "Bone Reaper" were cut to "Bone Re…" which is useless.
+ *   - HP value format changed from "100/200" to "100 / 200" for readability.
+ *   - Player HP format made consistent ("YOU" label stays, value spaced).
+ *   - Mobile action buttons: BUILD/STATS track open state via .is-active,
+ *     mirroring the desktop HudLeft.ts change.
  */
 
 import { runState } from '../bridge/RunStateStore';
@@ -19,7 +21,6 @@ export class MobileChrome {
   private bottomBar: HTMLElement;
   private hudRoot:   HTMLElement | null = null;
 
-  // ── Top bar elements ──────────────────────────────────────────────────────
   private tbFloor!:         HTMLElement;
   private tbPlayerHpFill!:  HTMLElement;
   private tbPlayerHpValue!: HTMLElement;
@@ -28,11 +29,16 @@ export class MobileChrome {
   private tbEnemyHpValue!:  HTMLElement;
   private tbModifier!:      HTMLElement;
 
-  // ── Bottom bar elements ───────────────────────────────────────────────────
   private bbGold!:     HTMLElement;
   private bbXpFill!:   HTMLElement;
   private bbLevel!:    HTMLElement;
   private bbSpeedBtns: HTMLElement[] = [];
+
+  // FIX: track open state for BUILD/STATS active indicator
+  private buildPanelOpen = false;
+  private statsPanelOpen = false;
+  private buildBtn!: HTMLElement;
+  private statsBtn!: HTMLElement;
 
   private subs: Array<() => void> = [];
   private canvasObserver: ResizeObserver | null = null;
@@ -124,19 +130,24 @@ export class MobileChrome {
       bus.emit({ type: 'pause:open', payload: {} });
     });
 
-    const buildBtn = el('div', 'mob-icon-btn');
-    buildBtn.textContent = 'BUILD';
-    buildBtn.addEventListener('click', () => {
+    // FIX: keep references for is-active toggling
+    this.buildBtn = el('div', 'mob-icon-btn');
+    this.buildBtn.textContent = 'BUILD';
+    this.buildBtn.addEventListener('click', () => {
       bus.emit({ type: 'hud:toggle-build', payload: {} });
+      this.buildPanelOpen = !this.buildPanelOpen;
+      this.buildBtn.classList.toggle('is-active', this.buildPanelOpen);
     });
 
-    const statsBtn = el('div', 'mob-icon-btn');
-    statsBtn.textContent = 'STATS';
-    statsBtn.addEventListener('click', () => {
+    this.statsBtn = el('div', 'mob-icon-btn');
+    this.statsBtn.textContent = 'STATS';
+    this.statsBtn.addEventListener('click', () => {
       bus.emit({ type: 'hud:toggle-stats', payload: {} });
+      this.statsPanelOpen = !this.statsPanelOpen;
+      this.statsBtn.classList.toggle('is-active', this.statsPanelOpen);
     });
 
-    actionRow.append(pauseBtn, buildBtn, statsBtn);
+    actionRow.append(pauseBtn, this.buildBtn, this.statsBtn);
     this.bottomBar.append(metaRow, actionRow);
   }
 
@@ -146,7 +157,6 @@ export class MobileChrome {
     const attach = () => {
       const canvas = document.querySelector('#canvas-mount canvas') as HTMLElement | null;
       if (!canvas) { setTimeout(attach, 100); return; }
-
       this.canvasObserver = new ResizeObserver(() => this.updateLayout(canvas));
       this.canvasObserver.observe(canvas);
       this.updateLayout(canvas);
@@ -178,10 +188,6 @@ export class MobileChrome {
   // ── Subscriptions ─────────────────────────────────────────────────────────
 
   private subscribe(): void {
-    // ── Modal guard ───────────────────────────────────────────────────────────
-    // The fixed panels live outside the modal stacking context. Disabling
-    // pointer-events while a modal is open stops them from swallowing taps
-    // in the dead-zone area that should reach modal buttons instead.
     this.subs.push(
       bus.on('modal:open', () => {
         this.topBar.style.pointerEvents    = 'none';
@@ -193,22 +199,26 @@ export class MobileChrome {
       }),
     );
 
-    // Run active / dead-zone visibility
     this.subs.push(
       runState.subscribe(s => s.isRunActive, () => {
         const canvas = document.querySelector('#canvas-mount canvas') as HTMLElement | null;
         if (canvas) this.updateLayout(canvas);
+        // FIX: reset panel open states when run ends
+        if (!runState.get().isRunActive) {
+          this.buildPanelOpen = false;
+          this.statsPanelOpen = false;
+          this.buildBtn.classList.remove('is-active');
+          this.statsBtn.classList.remove('is-active');
+        }
       }),
     );
 
-    // Floor
     this.subs.push(
       runState.subscribe(s => s.floor, floor => {
         this.tbFloor.textContent = `Floor ${floor}`;
       }),
     );
 
-    // Player HP
     this.subs.push(
       runState.subscribe(s => `${s.playerHp}|${s.playerMaxHp}`, () => {
         const { playerHp: hp, playerMaxHp: max } = runState.get();
@@ -216,11 +226,11 @@ export class MobileChrome {
         this.tbPlayerHpFill.style.width      = `${Math.floor(ratio * 100)}%`;
         this.tbPlayerHpFill.style.background =
           ratio > 0.5 ? '#2ecc71' : ratio > 0.25 ? '#f39c12' : '#e74c3c';
-        this.tbPlayerHpValue.textContent = `${hp}/${max}`;
+        // FIX: spaced format "100 / 200" instead of "100/200"
+        this.tbPlayerHpValue.textContent = `${hp} / ${max}`;
       }),
     );
 
-    // Enemy HP + name
     this.subs.push(
       runState.subscribe(
         s => `${s.enemyHp}|${s.enemyMaxHp}|${s.enemyName}|${s.isBoss}`,
@@ -228,18 +238,20 @@ export class MobileChrome {
           const { enemyHp: hp, enemyMaxHp: max, enemyName, isBoss } = runState.get();
           const isSpecial = max >= 999999;
           const ratio = !isSpecial && max > 0 ? Math.max(0, Math.min(1, hp / max)) : 0;
-          this.tbEnemyLabel.textContent = enemyName.length > 8
-            ? enemyName.slice(0, 7) + '…' : enemyName || 'ENEMY';
+
+          // FIX: truncation raised from 7 to 10 chars — boss names need room
+          this.tbEnemyLabel.textContent = enemyName.length > 10
+            ? enemyName.slice(0, 9) + '…' : enemyName || 'ENEMY';
           this.tbEnemyLabel.style.color       = isBoss ? '#ffd700' : '#ef5350';
           this.tbEnemyHpFill.style.width      = isSpecial ? '0%' : `${Math.floor(ratio * 100)}%`;
           this.tbEnemyHpFill.style.background =
             ratio > 0.5 ? '#e74c3c' : ratio > 0.25 ? '#e67e22' : '#ff6b6b';
-          this.tbEnemyHpValue.textContent = isSpecial ? '' : `${hp}/${max}`;
+          // FIX: spaced format "100 / 200" instead of "100/200"
+          this.tbEnemyHpValue.textContent = isSpecial ? '' : `${hp} / ${max}`;
         },
       ),
     );
 
-    // Modifier pill
     this.subs.push(
       runState.subscribe(s => s.modifierName, name => {
         if (name) {
@@ -251,14 +263,12 @@ export class MobileChrome {
       }),
     );
 
-    // Gold
     this.subs.push(
       runState.subscribe(s => s.gold, gold => {
         this.bbGold.textContent = `★ ${gold}`;
       }),
     );
 
-    // XP + level
     this.subs.push(
       runState.subscribe(s => `${s.playerXp}|${s.playerLevel}`, () => {
         const { playerXp, playerLevel } = runState.get();
@@ -267,7 +277,6 @@ export class MobileChrome {
       }),
     );
 
-    // Speed buttons active state
     this.subs.push(
       runState.subscribe(s => s.gameSpeed, speed => {
         this.bbSpeedBtns.forEach(btn => {

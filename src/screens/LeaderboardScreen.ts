@@ -1,43 +1,40 @@
 /**
- * LeaderboardScreen.ts — Personal run history leaderboard (M12).
+ * LeaderboardScreen.ts — Personal run history leaderboard.
  *
- * Registered with the router under 'leaderboard'.
- * Reads from ServiceLocator.history.getRecentRuns().
- * Filters: Mode, Class, Sort. Persisted to localStorage.
- * Clicking a row opens BuildInspectorModal.
+ * CHANGES:
+ *   - Desktop table: reduced from 9 columns to 7 (dropped score + time;
+ *     both still visible in BuildInspector on row click).
+ *   - Mobile: buildCardList() generates .lb-card elements as a compact
+ *     alternative to the table. CSS shows one and hides the other.
+ *   - Header count text replaced with personal-best context string.
+ *   - lb-row-data: cursor:pointer now set in CSS (leaderboard.css fix).
+ *   - Filter persistence unchanged.
  */
 
-import { ServiceLocator }   from '../services/ServiceLocator';
-import { RunResultDTO }      from '../services/types';
-import { MODES_REGISTRY }    from '../modes/GameModeConfig';
-import { router }            from '../router/Router';
+import { ServiceLocator }    from '../services/ServiceLocator';
+import { RunResultDTO }       from '../services/types';
+import { MODES_REGISTRY }     from '../modes/GameModeConfig';
+import { router }             from '../router/Router';
 import { openBuildInspector } from '../modals/BuildInspectorModal';
 
 const STORAGE_KEY = 'lb_filters_v1';
 
 interface Filters {
-  modeId:  string;   // '' = all
-  classId: string;   // '' = all
+  modeId:  string;
+  classId: string;
   sort:    'floor' | 'score' | 'kills' | 'date';
 }
-
-// ---------------------------------------------------------------------------
-// Factory
-// ---------------------------------------------------------------------------
 
 export function createLeaderboardScreen(): HTMLElement {
   return new LeaderboardScreen().el;
 }
 
-// ---------------------------------------------------------------------------
-// LeaderboardScreen class
-// ---------------------------------------------------------------------------
-
 class LeaderboardScreen {
   readonly el: HTMLElement;
 
   private filters: Filters;
-  private tableBody!: HTMLElement;
+  private tableBody!:  HTMLElement;
+  private cardList!:   HTMLElement;
   private allRuns: RunResultDTO[];
 
   constructor() {
@@ -55,6 +52,7 @@ class LeaderboardScreen {
       this.buildHeader(),
       this.buildFilterBar(),
       this.buildTable(),
+      this.buildCardList(),   // mobile alternative, hidden by CSS on desktop
     );
 
     return root;
@@ -66,14 +64,20 @@ class LeaderboardScreen {
     const hdr = el('div', 'lb-header');
 
     const back = el('button', 'lb-back-btn');
-    back.textContent = '← BACK';
+    back.textContent = '\u2190 BACK';
     back.addEventListener('click', () => router.back());
 
     const title = el('div', 'lb-title');
-    title.textContent = 'LEADERBOARD';
+    title.textContent = 'RUN HISTORY';
 
+    // FIX: show personal best context instead of raw run count
     const count = el('div', 'lb-count');
-    count.textContent = `${this.allRuns.length} runs recorded`;
+    const bestRun = this.allRuns
+      .filter(r => r.mode_id === 'classic')
+      .sort((a, b) => b.floor_reached - a.floor_reached)[0];
+    count.textContent = bestRun
+      ? 'Best: Floor ' + bestRun.floor_reached
+      : this.allRuns.length + ' runs';
 
     hdr.append(back, title, count);
     return hdr;
@@ -84,7 +88,6 @@ class LeaderboardScreen {
   private buildFilterBar(): HTMLElement {
     const bar = el('div', 'lb-filter-bar');
 
-    // Mode filter
     const modeSelect = this.buildSelect(
       'Mode',
       [{ value: '', label: 'All Modes' }, ...MODES_REGISTRY.map(m => ({ value: m.id, label: m.name }))],
@@ -92,16 +95,15 @@ class LeaderboardScreen {
       (v) => { this.filters.modeId = v; this.saveFilters(); this.refresh(); },
     );
 
-    // Class filter
-    const allClasses = [...new Set(this.allRuns.map(r => r.class_id))].sort();
+    const allClasses  = [...new Set(this.allRuns.map(r => r.class_id))].sort();
     const classSelect = this.buildSelect(
       'Class',
-      [{ value: '', label: 'All Classes' }, ...allClasses.map(c => ({ value: c, label: humanise(c) }))],
+      [{ value: '', label: 'All Classes' },
+       ...allClasses.map(c => ({ value: c, label: humanise(c) }))],
       this.filters.classId,
       (v) => { this.filters.classId = v; this.saveFilters(); this.refresh(); },
     );
 
-    // Sort
     const sortSelect = this.buildSelect(
       'Sort',
       [
@@ -119,9 +121,9 @@ class LeaderboardScreen {
   }
 
   private buildSelect(
-    label: string,
-    options: Array<{ value: string; label: string }>,
-    current: string,
+    label:    string,
+    options:  Array<{ value: string; label: string }>,
+    current:  string,
     onChange: (v: string) => void,
   ): HTMLElement {
     const wrap = el('div', 'lb-filter-wrap');
@@ -145,14 +147,14 @@ class LeaderboardScreen {
     return wrap;
   }
 
-  // ── Table ────────────────────────────────────────────────────────────────────
+  // ── Desktop table ────────────────────────────────────────────────────────────
 
   private buildTable(): HTMLElement {
     const wrap = el('div', 'lb-table-wrap');
 
-    // Header row
+    // FIX: 7 columns instead of 9 — score and time moved to BuildInspector
     const hdr = el('div', 'lb-row lb-row-hdr');
-    ['#', 'DATE', 'CLASS', 'MODE', 'FLOOR', 'SCORE', 'BUILD', 'KILLS', 'TIME'].forEach(col => {
+    ['#', 'DATE', 'CLASS', 'MODE', 'FLOOR', 'BUILD', 'KILLS'].forEach(col => {
       const c = el('span'); c.textContent = col; hdr.appendChild(c);
     });
     wrap.appendChild(hdr);
@@ -160,18 +162,24 @@ class LeaderboardScreen {
     this.tableBody = el('div', 'lb-table-body');
     wrap.appendChild(this.tableBody);
 
-    this.refresh();
     return wrap;
   }
+
+  // ── Mobile card list ─────────────────────────────────────────────────────────
+
+  private buildCardList(): HTMLElement {
+    this.cardList = el('div', 'lb-card-list');
+    return this.cardList;
+  }
+
+  // ── Refresh (both table and card list) ────────────────────────────────────────
 
   private refresh(): void {
     let runs = [...this.allRuns];
 
-    // Filter
     if (this.filters.modeId)  runs = runs.filter(r => r.mode_id  === this.filters.modeId);
     if (this.filters.classId) runs = runs.filter(r => r.class_id === this.filters.classId);
 
-    // Sort
     const sort = this.filters.sort;
     runs.sort((a, b) => {
       if (sort === 'floor') return b.floor_reached - a.floor_reached;
@@ -180,6 +188,11 @@ class LeaderboardScreen {
       return new Date(b.date).getTime() - new Date(a.date).getTime();
     });
 
+    this.refreshTable(runs);
+    this.refreshCards(runs);
+  }
+
+  private refreshTable(runs: RunResultDTO[]): void {
     this.tableBody.innerHTML = '';
 
     if (runs.length === 0) {
@@ -194,21 +207,68 @@ class LeaderboardScreen {
       if (i % 2 === 1) row.classList.add('is-alt');
 
       const modeCfg = MODES_REGISTRY.find(m => m.id === run.mode_id);
-      const dateStr = new Date(run.date).toLocaleDateString('en-GB', { month: 'short', day: 'numeric' });
+      const dateStr = new Date(run.date).toLocaleDateString('en-GB', {
+        month: 'short', day: 'numeric',
+      });
 
-      const rank    = el('span', 'lb-rank');     rank.textContent    = `${i + 1}`;
-      const date    = el('span', 'lb-date');     date.textContent    = dateStr;
-      const cls     = el('span', 'lb-cls');      cls.textContent     = humanise(run.class_id);
-      const mode    = el('span', 'lb-mode');     mode.textContent    = modeCfg ? `${modeCfg.icon} ${modeCfg.name}` : run.mode_id;
-      const floor   = el('span', 'lb-floor');    floor.textContent   = `${run.floor_reached}`;
-      const score   = el('span', 'lb-score');    score.textContent   = `${run.score}`;
-      const build   = el('span', 'lb-build');    build.textContent   = run.build_archetype;
-      const kills   = el('span', 'lb-kills');    kills.textContent   = `${run.kills}`;
-      const time    = el('span', 'lb-time');     time.textContent    = formatDuration(run.duration_ms);
+      // FIX: 7-column layout matches new lb-row grid in leaderboard.css
+      const rank  = el('span', 'lb-rank');   rank.textContent  = String(i + 1);
+      const date  = el('span', 'lb-date');   date.textContent  = dateStr;
+      const cls   = el('span', 'lb-cls');    cls.textContent   = humanise(run.class_id);
+      const mode  = el('span', 'lb-mode');
+      mode.textContent = modeCfg ? modeCfg.icon + ' ' + modeCfg.name : run.mode_id;
+      const floor = el('span', 'lb-floor');  floor.textContent = String(run.floor_reached);
+      const build = el('span', 'lb-build');  build.textContent = run.build_archetype;
+      const kills = el('span', 'lb-kills');  kills.textContent = String(run.kills);
 
-      row.append(rank, date, cls, mode, floor, score, build, kills, time);
+      row.append(rank, date, cls, mode, floor, build, kills);
       row.addEventListener('click', () => openBuildInspector(run));
       this.tableBody.appendChild(row);
+    });
+  }
+
+  private refreshCards(runs: RunResultDTO[]): void {
+    this.cardList.innerHTML = '';
+
+    if (runs.length === 0) {
+      const empty = el('div', 'lb-empty');
+      empty.textContent = 'No runs match these filters.';
+      this.cardList.appendChild(empty);
+      return;
+    }
+
+    runs.forEach((run, i) => {
+      const modeCfg = MODES_REGISTRY.find(m => m.id === run.mode_id);
+      const dateStr = new Date(run.date).toLocaleDateString('en-GB', {
+        month: 'short', day: 'numeric',
+      });
+
+      // Mobile card: rank | primary (class + mode) | floor
+      //              rank | meta (build archetype)  | date
+      const card = el('div', 'lb-card');
+
+      const rankEl   = el('div', 'lb-card-rank');
+      rankEl.textContent = String(i + 1);
+
+      const primaryEl = el('div', 'lb-card-primary');
+      primaryEl.textContent =
+        humanise(run.class_id) +
+        (modeCfg ? ' \u00b7 ' + modeCfg.name : '');
+
+      const floorEl  = el('div', 'lb-card-floor');
+      floorEl.textContent = run.mode_id === 'boss_rush'
+        ? (run.bosses_killed ?? 0) + ' bosses'
+        : 'Fl. ' + run.floor_reached;
+
+      const metaEl   = el('div', 'lb-card-meta');
+      metaEl.textContent = run.build_archetype;
+
+      const dateEl   = el('div', 'lb-card-date');
+      dateEl.textContent = dateStr;
+
+      card.append(rankEl, primaryEl, floorEl, metaEl, dateEl);
+      card.addEventListener('click', () => openBuildInspector(run));
+      this.cardList.appendChild(card);
     });
   }
 
@@ -239,12 +299,6 @@ function el(tag: string, className?: string): HTMLElement {
 }
 
 function humanise(id: string): string {
-  if (!id || id === 'unknown') return '—';
+  if (!id || id === 'unknown') return '\u2014';
   return id.charAt(0).toUpperCase() + id.slice(1).replace(/_/g, ' ');
-}
-
-function formatDuration(ms: number): string {
-  const s = Math.floor(ms / 1000);
-  const m = Math.floor(s / 60);
-  return m > 0 ? `${m}m ${s % 60}s` : `${s}s`;
 }
