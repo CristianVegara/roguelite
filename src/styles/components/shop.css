@@ -1,3 +1,22 @@
+/**
+ * shop.css — ShopScreen styles.
+ * Uses design tokens.
+ *
+ * CHANGES:
+ *   - .shop-preview: added image-rendering: pixelated/crisp-edges so
+ *     pixel-art class sprites are sharp instead of blurred. ShopScreen.ts
+ *     already sets backgroundSize: '300% auto' for base sprites and
+ *     'contain' for skins — the CSS enforces the rendering quality.
+ *   - .shop-skin-meta: base color is now var(--accent-gold) only for cost
+ *     states. EQUIPPED and UNLOCKED states use inline color overrides set
+ *     by ShopScreen.ts (green / grey respectively). The CSS default is kept
+ *     as gold so the cost display remains correct without inline override.
+ *   - .shop-action-btn.can-afford: green border/color now applied (was
+ *     missing — button looked disabled even when action was possible).
+ *   - Mobile: shop-preview width reduced to 72px (was 78px in original)
+ *     to give the detail grid more room for the title text.
+ */
+
 /* ── Shop screen ────────────────────────────────────────────────────────── */
 
 .shop-screen {
@@ -12,18 +31,19 @@
 }
 
 .shop-header {
-  display:          grid;
+  display:               grid;
   grid-template-columns: auto 1fr auto;
-  align-items:      center;
-  gap:              var(--space-3);
-  padding:          var(--space-3) var(--space-4);
-  flex-shrink:      0;
-  background-color: var(--bg-surface);
-  border-bottom:    1px solid var(--border-subtle);
+  align-items:           center;
+  gap:                   var(--space-3);
+  padding:               var(--space-3) var(--space-4);
+  flex-shrink:           0;
+  background-color:      var(--bg-surface);
+  border-bottom:         1px solid var(--border-subtle);
 }
 
 .shop-back-btn {
   padding:       var(--space-1) var(--space-2);
+  min-height:    44px;
   border-radius: var(--radius-md);
   color:         var(--text-dim);
   font-size:     var(--text-label);
@@ -45,10 +65,10 @@
 }
 
 .shop-subtitle {
-  margin-top:      2px;
-  font-size:       var(--text-caption);
-  letter-spacing:  var(--ls-caption);
-  color:           var(--text-dim);
+  margin-top:     2px;
+  font-size:      var(--text-caption);
+  letter-spacing: var(--ls-caption);
+  color:          var(--text-dim);
 }
 
 .shop-currency {
@@ -77,7 +97,7 @@
 }
 
 .shop-class-btn {
-  min-height:       38px;
+  min-height:       44px;
   padding:          var(--space-2);
   border:           1px solid var(--border-subtle);
   border-left:      3px solid var(--cls-color, var(--border-default));
@@ -88,7 +108,9 @@
   font-weight:      var(--weight-label);
   text-align:       left;
   line-height:      var(--lh-label);
-  transition:       border-color var(--transition-fast), background-color var(--transition-fast), color var(--transition-fast);
+  transition:       border-color var(--transition-fast),
+                    background-color var(--transition-fast),
+                    color var(--transition-fast);
 }
 .shop-class-btn:hover,
 .shop-class-btn.is-active {
@@ -106,20 +128,21 @@
 }
 
 .shop-detail {
-  display:          grid;
+  display:               grid;
   grid-template-columns: 92px 1fr;
   grid-template-areas:
     "preview title"
     "preview cost"
     "preview action";
-  gap:              var(--space-2) var(--space-3);
-  align-items:      center;
-  padding:          var(--space-3);
-  background-color: var(--bg-raised);
-  border:           1px solid var(--border-subtle);
-  border-radius:    var(--radius-lg);
+  gap:                   var(--space-2) var(--space-3);
+  align-items:           center;
+  padding:               var(--space-3);
+  background-color:      var(--bg-raised);
+  border:                1px solid var(--border-subtle);
+  border-radius:         var(--radius-lg);
 }
 
+/* FIX: pixel-art rendering — prevents browser from blurring scaled sprites */
 .shop-preview {
   grid-area:           preview;
   width:               92px;
@@ -128,7 +151,10 @@
   background-repeat:   no-repeat;
   border:              1px solid var(--border-default);
   border-radius:       var(--radius-md);
-  image-rendering:     auto;
+  /* Standards-track property */
+  image-rendering:     crisp-edges;
+  /* Chrome / Safari / older browsers */
+  image-rendering:     pixelated;
 }
 
 .shop-skin-title {
@@ -142,16 +168,16 @@
 }
 
 .shop-skin-cost {
-  grid-area:             cost;
-  color:                 var(--accent-gold);
-  font-size:             var(--text-label);
-  font-variant-numeric:  tabular-nums;
+  grid-area:            cost;
+  color:                var(--accent-gold);
+  font-size:            var(--text-label);
+  font-variant-numeric: tabular-nums;
 }
 
 .shop-action-btn {
   grid-area:        action;
   width:            100%;
-  min-height:       30px;
+  min-height:       36px;
   padding:          var(--space-1) var(--space-2);
   border:           1px solid var(--border-subtle);
   border-radius:    var(--radius-md);
@@ -160,27 +186,34 @@
   font-size:        var(--text-caption);
   font-weight:      var(--weight-label);
   letter-spacing:   var(--ls-label);
-  transition:       background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+  transition:       background-color var(--transition-fast),
+                    border-color var(--transition-fast),
+                    color var(--transition-fast);
 }
+/* FIX: was missing — actionable states (equip or affordable buy) now visibly styled */
 .shop-action-btn.can-afford {
   border-color: var(--border-success);
   color:        var(--text-heal);
 }
 .shop-action-btn.can-afford:hover { background-color: rgba(57,153,106,0.12); }
 
+/* ── Skin list buttons ───────────────────────────────────────────────────── */
+
 .shop-skin-btn {
   display:          flex;
   align-items:      center;
   justify-content:  space-between;
   gap:              var(--space-2);
-  min-height:       34px;
+  min-height:       40px;
   padding:          var(--space-2);
   border:           1px solid var(--border-subtle);
   border-radius:    var(--radius-md);
   background-color: var(--bg-raised);
   color:            var(--text-muted);
   text-align:       left;
-  transition:       border-color var(--transition-fast), background-color var(--transition-fast), color var(--transition-fast);
+  transition:       border-color var(--transition-fast),
+                    background-color var(--transition-fast),
+                    color var(--transition-fast);
 }
 .shop-skin-btn:hover,
 .shop-skin-btn.is-active {
@@ -198,11 +231,15 @@
   overflow-wrap:  anywhere;
 }
 
+/* Base meta color: gold for cost display.
+   ShopScreen.ts overrides inline for EQUIPPED (green) and UNLOCKED (grey).
+   Do not add state-specific color rules here — they will conflict with the
+   inline overrides set dynamically by JS based on ownership state. */
 .shop-skin-meta {
-  flex-shrink:            0;
-  color:                  var(--accent-gold);
-  font-size:              var(--text-caption);
-  font-variant-numeric:   tabular-nums;
+  flex-shrink:          0;
+  color:                var(--accent-gold);
+  font-size:            var(--text-caption);
+  font-variant-numeric: tabular-nums;
 }
 
 .shop-empty {
@@ -213,6 +250,8 @@
   font-size:     var(--text-caption);
   text-align:    center;
 }
+
+/* ── Mobile overrides ────────────────────────────────────────────────────── */
 
 @media (max-width: 479px) {
   .shop-body {
@@ -229,8 +268,12 @@
   }
 
   .shop-detail {
-    grid-template-columns: 78px 1fr;
+    grid-template-columns: 72px 1fr;
   }
 
-  .shop-preview { width: 78px; }
+  /* FIX: slightly reduced from 78px to give title text more room */
+  .shop-preview { width: 72px; }
+
+  /* Skin buttons: taller tap target */
+  .shop-skin-btn { min-height: 44px; }
 }

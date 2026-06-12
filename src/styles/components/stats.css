@@ -1,6 +1,17 @@
 /**
- * stats.css — StatsScreen styles (M11).
- * Uses design tokens. M13 applies the visual-identity polish pass.
+ * stats.css — StatsScreen styles.
+ * Uses design tokens.
+ *
+ * CHANGES:
+ *   - Added .st-run-chart, .st-chart-row, .st-chart-track,
+ *     .st-chart-fill, .st-chart-label, .st-chart-value for the new
+ *     floor history bar chart section.
+ *   - Added .st-show-more-btn for the milestone expand/collapse toggle.
+ *   - .st-stat-grid mobile override: 2 cols instead of 4 (was already
+ *     in original — kept).
+ *   - .st-milestone-grid mobile override: 1 col (was already in original).
+ *   - .st-run-row mobile: drops date and duration columns (was already in
+ *     original — kept and adjusted for 3-column layout).
  */
 
 .stats-screen {
@@ -33,7 +44,8 @@
   font-size:      var(--text-label);
   font-weight:    var(--weight-label);
   cursor:         pointer;
-  padding:        var(--space-1) var(--space-2);
+  min-height:     44px;
+  padding:        var(--space-2) var(--space-3);
   border-radius:  var(--radius-md);
   transition:     color var(--transition-fast), background-color var(--transition-fast);
   white-space:    nowrap;
@@ -114,8 +126,60 @@
   text-align:       center;
 }
 .st-stat-lbl { font-size: var(--text-caption); color: var(--text-dim); letter-spacing: var(--ls-caption); }
-.st-stat-val { font-size: var(--text-body); font-weight: var(--weight-label);
-               font-variant-numeric: tabular-nums; margin-top: 2px; }
+.st-stat-val {
+  font-size:            var(--text-body);
+  font-weight:          var(--weight-label);
+  font-variant-numeric: tabular-nums;
+  margin-top:           2px;
+}
+
+/* ── Run chart ──────────────────────────────────────────────────────────── */
+
+.st-run-chart {
+  display:        flex;
+  flex-direction: column;
+  gap:            3px;
+}
+
+.st-chart-row {
+  display:               grid;
+  grid-template-columns: 20px 1fr 52px;
+  align-items:           center;
+  gap:                   var(--space-2);
+  height:                20px;
+}
+
+.st-chart-label {
+  font-size:            var(--text-caption);
+  color:                var(--text-dim);
+  text-align:           right;
+  font-variant-numeric: tabular-nums;
+  flex-shrink:          0;
+}
+
+.st-chart-track {
+  height:           10px;
+  background-color: var(--bg-raised);
+  border:           1px solid var(--border-subtle);
+  border-radius:    var(--radius-full);
+  overflow:         hidden;
+}
+
+.st-chart-fill {
+  height:        100%;
+  background:    var(--accent-lightning);
+  border-radius: var(--radius-full);
+  /* Opacity is set inline per-bar for the recency fade effect */
+  transition:    width var(--transition-normal) var(--ease-enter);
+}
+
+.st-chart-value {
+  font-size:            var(--text-caption);
+  color:                var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  text-align:           right;
+  white-space:          nowrap;
+}
 
 /* ── Row list (class stats) ─────────────────────────────────────────────── */
 
@@ -162,6 +226,27 @@
 .st-milestone-check { font-size: var(--text-label); color: var(--text-dim); }
 .st-milestone-chip.is-earned .st-milestone-check { color: var(--accent-nature); }
 
+/* Show-more toggle button */
+.st-show-more-btn {
+  align-self:     flex-start;
+  margin-top:     var(--space-1);
+  padding:        var(--space-1) var(--space-3);
+  min-height:     32px;
+  background:     none;
+  border:         1px solid var(--border-subtle);
+  border-radius:  var(--radius-md);
+  color:          var(--text-dim);
+  font-family:    var(--font-mono);
+  font-size:      var(--text-caption);
+  font-weight:    var(--weight-label);
+  cursor:         pointer;
+  transition:     color var(--transition-fast), border-color var(--transition-fast);
+}
+.st-show-more-btn:hover {
+  color:        var(--text-muted);
+  border-color: var(--border-default);
+}
+
 /* ── Recent runs list ───────────────────────────────────────────────────── */
 
 .st-run-list { display: flex; flex-direction: column; gap: 2px; }
@@ -190,13 +275,17 @@
 /* ── Mobile overrides ────────────────────────────────────────────────────── */
 
 @media (max-width: 479px) {
-  /* Career stats: 2 cols instead of 4 — each cell stays readable */
+  /* Career stats: 2 cols */
   .st-stat-grid { grid-template-columns: 1fr 1fr; }
 
-  /* Milestones: single column so the description text has room */
+  /* Milestones: single column */
   .st-milestone-grid { grid-template-columns: 1fr; }
 
-  /* Recent runs: drop date and duration — show class · floor · build only */
+  /* Run chart: slightly taller bars for easier reading */
+  .st-chart-track { height: 12px; }
+  .st-chart-row   { height: 22px; }
+
+  /* Recent runs: show class, floor, build only */
   .st-run-row {
     grid-template-columns: 72px 40px 1fr;
   }

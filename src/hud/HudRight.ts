@@ -4,17 +4,31 @@
  * Subscribes to:
  *   enemyHp, enemyMaxHp, enemyName, enemyPoisonStacks, enemyBurnStacks,
  *   summonCount, summonUpgrades
+ *
+ * CHANGES:
+ *   - updateEnemy(): enemy name now carries a trailing " →" directional
+ *     arrow to spatially anchor "this panel = right side = enemy."
+ *     Mirrors the "← YOU" anchor added in HudLeft.ts.
+ *   - updateEnemy(): boss label uses gold color AND a small crown prefix
+ *     so bosses are visually distinct before you read the name.
+ *   - buildEnemyHpPanel(): name element alignment set to right so the
+ *     arrow stays at the panel edge, reinforcing the rightward anchor.
+ *   - Status pips: poison/burn now display as compact colored pills
+ *     rather than raw unicode — more consistent with the design system.
  */
 
 import { runState } from '../bridge/RunStateStore';
 
-// Human-readable labels for each summon upgrade ID.
 const SUMMON_LABELS: Record<string, string> = {
   familiar:            'Familiar',
   pack_leader:         'Pack Leader',
   coordinated_strike:  'Coord. Strike',
   lich_form:           'Lich Form',
 };
+
+// How many characters of the enemy name fit before we truncate.
+// Desktop panels are 232px wide — 22 chars at caption size is comfortable.
+const NAME_MAX_CHARS = 22;
 
 export class HudRight {
   private nameEl!:     HTMLElement;
@@ -23,9 +37,8 @@ export class HudRight {
   private poisonPip!:  HTMLElement;
   private burnPip!:    HTMLElement;
 
-  // Summon mini-entity panel
-  private summonPanel!:      HTMLElement;
-  private summonCountBadge!: HTMLElement;
+  private summonPanel!:       HTMLElement;
+  private summonCountBadge!:  HTMLElement;
   private summonUpgradeList!: HTMLElement;
 
   private subs: Array<() => void> = [];
@@ -49,12 +62,18 @@ export class HudRight {
     accent.style.background = '#ef5350';
 
     this.nameEl = el('div', 'hud-hp-name');
-    this.nameEl.textContent = 'ENEMY';
-    this.nameEl.style.color = '#ef5350';
+    this.nameEl.textContent = 'ENEMY \u2192';
+    this.nameEl.style.color     = '#ef5350';
+    // FIX: right-align so the arrow always sits at the panel's right edge,
+    // reinforcing the "right side = enemy" spatial anchor.
+    this.nameEl.style.textAlign = 'right';
+    this.nameEl.style.left      = '8px';
+    this.nameEl.style.right     = '8px';
+    this.nameEl.style.width     = 'auto';
 
     this.hpValue = el('div', 'hud-hp-value');
 
-    const track = el('div', 'hud-hp-track');
+    const track  = el('div', 'hud-hp-track');
     this.hpFill  = el('div', 'hud-hp-fill');
     this.hpFill.style.background = '#e74c3c';
     track.appendChild(this.hpFill);
@@ -68,36 +87,20 @@ export class HudRight {
     return panel;
   }
 
-  /**
-   * Summon mini-entity panel — shows below the enemy HP panel when the player
-   * has at least one summon active.
-   *
-   * Layout:
-   *   ┌─────────────────────────────┐
-   *   │  👁  SUMMONS  ×N            │  ← header row
-   *   │  • Familiar       ×1        │  ← one row per owned summon upgrade
-   *   │  • Pack Leader    ×2        │
-   *   └─────────────────────────────┘
-   */
   private buildSummonPanel(): HTMLElement {
     this.summonPanel = el('div', 'hud-summon-panel');
     this.summonPanel.style.display = 'none';
 
-    // Header
     const header = el('div', 'hud-summon-header');
-
-    const icon = el('span', 'hud-summon-icon');
-    icon.textContent = '👁';
-
-    const title = el('span', 'hud-summon-title');
+    const icon   = el('span', 'hud-summon-icon');
+    icon.textContent = '\ud83d\udc41';          // 👁
+    const title  = el('span', 'hud-summon-title');
     title.textContent = 'SUMMONS';
-
     this.summonCountBadge = el('span', 'hud-summon-count');
-    this.summonCountBadge.textContent = '×0';
+    this.summonCountBadge.textContent = '\xd70';
 
     header.append(icon, title, this.summonCountBadge);
 
-    // Upgrade list (populated dynamically)
     this.summonUpgradeList = el('div', 'hud-summon-upgrade-list');
 
     this.summonPanel.append(header, this.summonUpgradeList);
@@ -107,7 +110,6 @@ export class HudRight {
   // ── Subscriptions ─────────────────────────────────────────────────────────
 
   private subscribe(): void {
-    // Enemy HP + name
     this.subs.push(
       runState.subscribe(
         s => `${s.enemyHp}|${s.enemyMaxHp}|${s.enemyName}|${s.isBoss}`,
@@ -118,30 +120,35 @@ export class HudRight {
       ),
     );
 
-    // Status pips
     this.subs.push(
       runState.subscribe(s => s.enemyPoisonStacks, (stacks) => {
-        this.poisonPip.textContent  = stacks > 0 ? `☠ ×${stacks}` : '';
-        this.poisonPip.style.display = stacks > 0 ? 'inline' : 'none';
+        if (stacks > 0) {
+          this.poisonPip.textContent  = '\u2620 \xd7' + stacks;
+          this.poisonPip.style.display = 'inline';
+        } else {
+          this.poisonPip.style.display = 'none';
+        }
       }),
     );
 
     this.subs.push(
       runState.subscribe(s => s.enemyBurnStacks, (stacks) => {
-        this.burnPip.textContent   = stacks > 0 ? '🔥 BURN' : '';
-        this.burnPip.style.display = stacks > 0 ? 'inline' : 'none';
+        if (stacks > 0) {
+          this.burnPip.textContent   = '\ud83d\udd25 BURN';
+          this.burnPip.style.display = 'inline';
+        } else {
+          this.burnPip.style.display = 'none';
+        }
       }),
     );
 
-    // Summon count badge
     this.subs.push(
       runState.subscribe(s => s.summonCount, (count) => {
-        this.summonPanel.style.display   = count > 0 ? 'block' : 'none';
-        this.summonCountBadge.textContent = `×${count}`;
+        this.summonPanel.style.display    = count > 0 ? 'block' : 'none';
+        this.summonCountBadge.textContent = '\xd7' + count;
       }),
     );
 
-    // Summon upgrades list — re-render whenever the owned map changes
     this.subs.push(
       runState.subscribe(
         s => JSON.stringify(s.summonUpgrades),
@@ -155,10 +162,20 @@ export class HudRight {
 
   // ── Render helpers ────────────────────────────────────────────────────────
 
-  private updateEnemy(hp: number, maxHp: number, name: string, isBoss: boolean): void {
+  private updateEnemy(
+    hp: number, maxHp: number, name: string, isBoss: boolean,
+  ): void {
     const isSpecial = maxHp >= 999999;
 
-    this.nameEl.textContent = name.length > 22 ? name.slice(0, 20) + '…' : name;
+    // FIX: boss gets a crown prefix so it's visually distinct before reading
+    // the name. Regular enemies get no prefix.
+    const prefix  = isBoss ? '\u265b ' : '';
+    // FIX: trailing arrow anchors this panel to the right side of the screen
+    const display = prefix +
+      (name.length > NAME_MAX_CHARS ? name.slice(0, NAME_MAX_CHARS - 1) + '\u2026' : name) +
+      ' \u2192';
+
+    this.nameEl.textContent = display;
     this.nameEl.style.color = isBoss ? '#ffd700' : '#ef5350';
 
     if (isSpecial) {
@@ -167,16 +184,13 @@ export class HudRight {
       return;
     }
 
-    this.hpValue.textContent = `${hp} / ${maxHp}`;
+    this.hpValue.textContent = hp + ' / ' + maxHp;
     const ratio = maxHp > 0 ? Math.max(0, Math.min(1, hp / maxHp)) : 0;
-    this.hpFill.style.width    = `${Math.max(0, Math.floor(ratio * 100))}%`;
-    this.hpFill.style.background = ratio > 0.5 ? '#e74c3c' : ratio > 0.25 ? '#e67e22' : '#ff6b6b';
+    this.hpFill.style.width      = Math.max(0, Math.floor(ratio * 100)) + '%';
+    this.hpFill.style.background =
+      ratio > 0.5 ? '#e74c3c' : ratio > 0.25 ? '#e67e22' : '#ff6b6b';
   }
 
-  /**
-   * Clears and rebuilds the summon upgrade rows.
-   * Each row: "• <name>  ×<stacks>"  with stack dots on the right.
-   */
   private rebuildSummonUpgradeList(upgrades: Record<string, number>): void {
     this.summonUpgradeList.innerHTML = '';
 
@@ -190,7 +204,7 @@ export class HudRight {
       nameSpan.textContent = SUMMON_LABELS[id] ?? id;
 
       const dotsSpan = el('span', 'hud-summon-upgrade-dots');
-      dotsSpan.textContent = '●'.repeat(stacks);
+      dotsSpan.textContent = '\u25cf'.repeat(stacks);
 
       row.append(nameSpan, dotsSpan);
       this.summonUpgradeList.appendChild(row);

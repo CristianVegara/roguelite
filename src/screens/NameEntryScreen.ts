@@ -19,8 +19,11 @@ import { router }                from '../router/Router';
 // Factory — registered with the router
 // ---------------------------------------------------------------------------
 
-export function createNameEntryScreen(params?: Record<string, unknown>): HTMLElement {
-  const isRename = params?.['rename'] === true;
+export function createNameEntryScreen(): HTMLElement {
+  // Rename context is passed via sessionStorage to avoid router params type
+  // constraints. HomeScreen sets 'rename' before navigating; we clear it here.
+  const isRename = sessionStorage.getItem('nameEntryContext') === 'rename';
+  sessionStorage.removeItem('nameEntryContext');
   return new NameEntryScreen(isRename).el;
 }
 

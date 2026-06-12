@@ -80,7 +80,7 @@ export class HudLeft {
     accent.style.background = '#4fc3f7';
 
     const name = el('div', 'hud-hp-name');
-    name.textContent = 'PLAYER';
+    name.textContent = '\u2190 YOU';
     name.style.color = '#4fc3f7';
 
     this.hpValue = el('div', 'hud-hp-value');
