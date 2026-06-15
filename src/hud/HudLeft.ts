@@ -126,6 +126,14 @@ export class HudLeft {
     // Right zone: action buttons
     const kbHints = el('div', 'hud-kb-hints');
 
+    // FIX: pause button added to desktop HUD — was missing, only M key worked
+    const pauseBtn = el('button', 'hud-action-btn hud-action-btn--pause');
+    pauseBtn.textContent = '\u23f8';
+    pauseBtn.title = 'Pause (M)';
+    pauseBtn.addEventListener('click', () => {
+      bus.emit({ type: 'pause:open', payload: {} });
+    });
+
     this.buildBtn = el('button', 'hud-action-btn');
     this.buildBtn.textContent = 'BUILD';
     this.buildBtn.title = 'Toggle build overview (B)';
@@ -144,7 +152,7 @@ export class HudLeft {
       this.statsBtn.classList.toggle('is-active', this.statsPanelOpen);
     });
 
-    kbHints.append(this.buildBtn, this.statsBtn);
+    kbHints.append(pauseBtn, this.buildBtn, this.statsBtn);
     bar.appendChild(kbHints);
 
     return bar;

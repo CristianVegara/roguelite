@@ -15,9 +15,23 @@
 #app {
   position:         relative;
   width:            100vw;
+  /* FIX: 100dvh (dynamic viewport height) avoids the iOS Safari address-bar
+     bug where 100vh includes the browser chrome height, leaving a gap at
+     the bottom when the bar auto-hides. Falls back to 100vh for older
+     browsers via the cascade. */
   height:           100vh;
+  height:           100dvh;
   overflow:         hidden;
   background-color: var(--bg-base);
+  /* FIX: safe-area padding so the app background fills behind the notch
+     and home indicator on iOS. Content is positioned inside this padding
+     via the individual elements that use env(safe-area-inset-*). */
+  padding:          env(safe-area-inset-top,    0px)
+                    env(safe-area-inset-right,   0px)
+                    env(safe-area-inset-bottom,  0px)
+                    env(safe-area-inset-left,    0px);
+  /* Remove padding from the box model so children still fill the full area */
+  box-sizing:       border-box;
 }
 
 /* ── Background image layer — behind everything, including the canvas ──────── */
@@ -36,6 +50,11 @@
 
 #canvas-mount {
   position: absolute;
+  /* FIX: inset:0 inside a safe-area-padded #app means the canvas mount
+     fills the INNER area (inside the notch). For the canvas we want it
+     centered in the full viewport, so we use fixed insets that break out
+     of the parent padding. Negative margins counteract the safe-area
+     padding so the canvas is always centred in the true viewport. */
   inset:    0;
   z-index:  var(--z-base);
 
