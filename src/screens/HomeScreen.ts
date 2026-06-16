@@ -27,6 +27,7 @@ import { ServiceLocator }                    from '../services/ServiceLocator';
 import { ALL_MILESTONES }                     from '../services/types';
 import { metaService, UPGRADE_INFO, META_MAX_LEVEL, UpgradeKey } from '../meta/MetaService';
 import { MODES_REGISTRY, GameModeConfig }    from '../modes/GameModeConfig';
+import { ALL_CLASSES }                        from '../data/ClassDefinition';
 import { router }                            from '../router/Router';
 import { startRun }                          from '../bridge/startRun';
 
@@ -74,6 +75,7 @@ class HomeScreen {
     this.el = this.build();
     this.showTab('play');
     this.refreshCurrencyState();
+    this.bindKeyboard();
   }
 
   // ── Root shell ─────────────────────────────────────────────────────────────
@@ -309,6 +311,8 @@ class HomeScreen {
 
   private buildUpgradeRow(key: UpgradeKey, label: string, color: number): HTMLElement {
     const row = el('div', 'hs-upgrade-row');
+    // FIX 16: left-border accent color matches the upgrade's own color token
+    row.style.setProperty('--upg-accent', intToHex(color));
 
     const nameEl = el('span', 'hs-upg-name');
     nameEl.textContent = label;
@@ -478,6 +482,26 @@ class HomeScreen {
     }
 
     const card = el('div', 'hs-profile-card');
+
+    // FIX 22: styled initials avatar — more personal than a class emoji.
+    // Shows the first letter of the player name in a coloured circle,
+    // with the player's favourite class emoji as a small badge overlay.
+    const avatarWrap = el('div', 'hs-avatar-wrap');
+    const avatarCircle = el('div', 'hs-avatar-circle');
+    // Derive a hue from the name so each player gets a consistent colour
+    const hue = Array.from(profile.name).reduce((acc, c) => acc + c.charCodeAt(0), 0) % 360;
+    avatarCircle.style.setProperty('--avatar-hue', String(hue));
+    avatarCircle.textContent = (profile.name[0] ?? '?').toUpperCase();
+
+    const favClass = (profile.favorite_class ?? '');
+    if (favClass) {
+      const badge = el('span', 'hs-avatar-badge');
+      const cls = ALL_CLASSES.find(c => c.id === favClass);
+      badge.textContent = cls?.icon ?? '\u2605';
+      avatarWrap.appendChild(badge);
+    }
+    avatarWrap.appendChild(avatarCircle);
+
     const nameEl = el('div', 'hs-profile-name'); nameEl.textContent = profile.name;
 
     const streak = profile.current_streak > 1
@@ -485,7 +509,10 @@ class HomeScreen {
     const subEl  = el('div', 'hs-profile-sub');
     subEl.textContent = profile.total_runs + ' runs \u00b7 Best fl. ' + profile.highest_floor + streak;
 
-    card.append(nameEl, subEl);
+    // Wrap text in a column body so it sits beside the avatar, not as separate flex items
+    const cardBody = el('div', 'hs-profile-card-body');
+    cardBody.append(nameEl, subEl);
+    card.append(avatarWrap, cardBody);
 
     const titleEl = el('span', 'hs-profile-title');
     if (profile.active_title) {
@@ -619,6 +646,11 @@ class HomeScreen {
     });
     pane.appendChild(bindList);
 
+    // FIX 17: version line — players know what build they're on
+    const versionRow = el('div', 'hs-version-row');
+    versionRow.textContent = 'The Spire \u00b7 browser build';
+    pane.appendChild(versionRow);
+
     return pane;
   }
 
@@ -646,6 +678,53 @@ class HomeScreen {
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────
+
+  /**
+   * FIX 18: Keyboard navigation for tabs.
+   * Left / Right arrow keys cycle through tabs.
+   * Only active when the home screen is mounted and no modal is open.
+   */
+  private bindKeyboard(): void {
+    const TAB_ORDER: TabId[] = ['play', 'upgrades', 'history', 'profile', 'settings'];
+
+    const onKey = (e: KeyboardEvent) => {
+      // Skip if focus is inside an input or the event target is interactive
+      const tag = (document.activeElement?.tagName ?? '').toLowerCase();
+      if (tag === 'input' || tag === 'button' || tag === 'select') return;
+      // Skip if a modal dim overlay is visible
+      if (document.querySelector('.modal-dim.is-visible')) return;
+
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+
+      // Find currently active tab
+      let currentIdx = 0;
+      this.tabBtns.forEach((_, key) => {
+        const idx = TAB_ORDER.indexOf(key);
+        if (this.tabs.get(key)?.classList.contains('is-active') && idx >= 0) {
+          currentIdx = idx;
+        }
+      });
+
+      const dir      = e.key === 'ArrowRight' ? 1 : -1;
+      const nextIdx  = (currentIdx + dir + TAB_ORDER.length) % TAB_ORDER.length;
+      const nextTab  = TAB_ORDER[nextIdx];
+      e.preventDefault();
+      this.showTab(nextTab);
+      // Move focus to the tab button so keyboard position is visible
+      this.tabBtns.get(nextTab)?.focus();
+    };
+
+    document.addEventListener('keydown', onKey);
+
+    // Clean up when this screen is removed from the DOM
+    const observer = new MutationObserver(() => {
+      if (!document.body.contains(this.el)) {
+        document.removeEventListener('keydown', onKey);
+        observer.disconnect();
+      }
+    });
+    observer.observe(document.body, { childList: true, subtree: false });
+  }
 
   private getBestRunForMode(modeId: string) {
     const runs = ServiceLocator.history.getRecentRuns(50).filter(r => r.mode_id === modeId);

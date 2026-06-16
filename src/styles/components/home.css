@@ -405,7 +405,11 @@
   padding:          var(--space-2) var(--space-3);
   background-color: var(--bg-raised);
   border:           1px solid var(--border-subtle);
+  /* FIX 16: left-border color matches the upgrade's own color token
+     set via --upg-accent in HomeScreen.ts */
+  border-left:      3px solid var(--upg-accent, var(--border-subtle));
   border-radius:    var(--radius-md);
+  transition:       border-left-color var(--transition-fast);
 }
 
 .hs-upg-name {
@@ -538,6 +542,61 @@
 .hs-ranks-build { color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; }
 .hs-ranks-date  { color: var(--text-dim); text-align: right; }
 
+/* ── Profile avatar ─────────────────────────────────────────────────────── */
+/* FIX 22: initials circle with hue derived from player name */
+
+.hs-avatar-wrap {
+  position:    relative;
+  flex-shrink: 0;
+  width:       52px;
+  height:      52px;
+}
+
+.hs-avatar-circle {
+  width:            52px;
+  height:           52px;
+  border-radius:    var(--radius-full);
+  display:          flex;
+  align-items:      center;
+  justify-content:  center;
+  font-size:        var(--text-title);
+  font-weight:      var(--weight-title);
+  color:            #fff;
+  /* Hue is set as --avatar-hue via inline style in HomeScreen.ts */
+  background:       hsl(var(--avatar-hue, 270), 45%, 30%);
+  border:           1px solid hsl(var(--avatar-hue, 270), 45%, 45%);
+  user-select:      none;
+}
+
+.hs-avatar-badge {
+  position:    absolute;
+  bottom:      -2px;
+  right:       -4px;
+  font-size:   1rem;
+  line-height: 1;
+  /* Small white disc so emoji sits cleanly on any background */
+  background:  var(--bg-surface);
+  border:      1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  width:       22px;
+  height:      22px;
+  display:     flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Settings version row ───────────────────────────────────────────────── */
+/* FIX 17 */
+
+.hs-version-row {
+  margin-top:  auto;
+  padding-top: var(--space-3);
+  font-size:   var(--text-caption);
+  color:       var(--text-dim);
+  text-align:  center;
+  opacity:     0.6;
+}
+
 /* ── Profile pane ───────────────────────────────────────────────────────── */
 
 .hs-profile-pane {
@@ -576,10 +635,19 @@
 
 .hs-profile-card {
   position:         relative;
+  display:          flex;
+  align-items:      center;
+  gap:              var(--space-3);
   padding:          var(--space-4);
   background-color: var(--bg-raised);
   border:           1px solid var(--border-default);
   border-radius:    var(--radius-lg);
+}
+
+/* Text content sits to the right of the avatar */
+.hs-profile-card-body {
+  flex:     1;
+  min-width: 0;
 }
 .hs-profile-name {
   font-size:     var(--text-title);
