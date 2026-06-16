@@ -97,9 +97,31 @@ class ClassSelectScreen {
   private buildGrid(): HTMLElement {
     const grid = document.createElement('div');
     grid.className = 'cs-grid';
+    grid.setAttribute('role', 'list');
+    grid.setAttribute('aria-label', 'Choose your class');
 
     ALL_CLASSES.forEach(cls => {
       grid.appendChild(this.buildCard(cls));
+    });
+
+    // Arrow key navigation through cards
+    grid.addEventListener('keydown', (e) => {
+      const cards = Array.from(grid.querySelectorAll<HTMLElement>('.cs-card'));
+      const focused = document.activeElement as HTMLElement;
+      const idx = cards.indexOf(focused);
+      if (idx < 0) return;
+
+      let next = -1;
+      const cols = window.innerWidth <= 479 ? 1 : 2;
+      if (e.key === 'ArrowRight') next = Math.min(idx + 1, cards.length - 1);
+      else if (e.key === 'ArrowLeft')  next = Math.max(idx - 1, 0);
+      else if (e.key === 'ArrowDown')  next = Math.min(idx + cols, cards.length - 1);
+      else if (e.key === 'ArrowUp')    next = Math.max(idx - cols, 0);
+
+      if (next >= 0 && next !== idx) {
+        e.preventDefault();
+        cards[next].focus();
+      }
     });
 
     return grid;
@@ -109,6 +131,9 @@ class ClassSelectScreen {
     const card = document.createElement('div');
     card.className = 'cs-card';
     card.style.setProperty('--cls-color', intToHex(cls.color));
+    card.setAttribute('role', 'listitem');
+    card.setAttribute('tabindex', '0');
+    card.setAttribute('aria-label', cls.name + ' — ' + cls.flavour);
 
     // ── Sprite preview ──────────────────────────────────────────────────────
     // Try to load the class sprite sheet style. Falls back to emoji icon.
@@ -184,6 +209,13 @@ class ClassSelectScreen {
     card.addEventListener('click', () => {
       card.classList.add('is-selected');
       setTimeout(() => startRun({ modeId: this.modeId, classId: cls.id }), 80);
+    });
+    card.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        card.classList.add('is-selected');
+        setTimeout(() => startRun({ modeId: this.modeId, classId: cls.id }), 80);
+      }
     });
 
     return card;

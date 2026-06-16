@@ -82,35 +82,39 @@ class NameEntryScreen {
     this.input.type         = 'text';
     this.input.maxLength    = 16;
     this.input.placeholder  = 'Your name…';
-    this.input.autocomplete = 'off';
+    this.input.autocomplete = 'username';
     this.input.spellcheck   = false;
     this.input.className    = 'ne-input';
-    // FIX: mobile keyboard shows text input mode and a "Done" action key
-    this.input.setAttribute('inputmode', 'text');
-    this.input.setAttribute('enterkeyhint', 'done');
-    // FIX: autocorrect/autocapitalize off — player names are case-sensitive
-    this.input.setAttribute('autocorrect', 'off');
-    this.input.setAttribute('autocapitalize', 'off');
+    this.input.setAttribute('inputmode',       'text');
+    this.input.setAttribute('enterkeyhint',    'done');
+    this.input.setAttribute('autocorrect',     'off');
+    this.input.setAttribute('autocapitalize',  'off');
+    // Accessibility: associate input with hint and error via IDs
+    this.input.setAttribute('aria-label',      'Player name');
+    this.input.setAttribute('aria-describedby','ne-hint ne-error');
+    this.input.setAttribute('aria-required',   'true');
 
     // Hint row: hint text + character counter
     const hintRow = document.createElement('div');
     hintRow.className = 'ne-hint-row';
 
     const hint = document.createElement('div');
+    hint.id          = 'ne-hint';
     hint.className   = 'ne-hint';
     hint.textContent = '2–16 characters  ·  letters, numbers, hyphens';
 
-    // FIX: live character counter — shows "N/16" as user types
     this.charCountEl = document.createElement('div');
     this.charCountEl.className   = 'ne-char-count';
-    this.charCountEl.textContent = `0/16`;
+    this.charCountEl.textContent = '0/16';
+    this.charCountEl.setAttribute('aria-live', 'polite');
 
     hintRow.append(hint, this.charCountEl);
 
     this.errorEl = document.createElement('div');
+    this.errorEl.id        = 'ne-error';
     this.errorEl.className = 'ne-error';
-    // Reserve the space so error text doesn't cause layout shift
-    this.errorEl.setAttribute('aria-live', 'polite');
+    this.errorEl.setAttribute('aria-live', 'assertive');
+    this.errorEl.setAttribute('role',      'alert');
 
     const btn = document.createElement('button');
     btn.className   = 'ne-begin-btn';

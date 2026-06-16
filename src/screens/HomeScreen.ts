@@ -32,14 +32,23 @@ import { router }                            from '../router/Router';
 import { startRun }                          from '../bridge/startRun';
 
 // ---------------------------------------------------------------------------
-// Mode flavour copy — keyed by mode ID.
-// Falls back to mode.description if the ID isn't listed here.
+// Mode copy — keyed by mode ID.
+// Falls back to mode.description from GameModeConfig if the ID isn't listed.
 // ---------------------------------------------------------------------------
 const MODE_FLAVOUR: Record<string, string> = {
   classic:    'Endless floors. Build until you fall.',
   boss_rush:  'Bosses only, back to back. No breathing room.',
   one_hp:     'One hit ends everything. Choose every upgrade carefully.',
   chaos:      'Random relics from the very start. Embrace the disorder.',
+};
+
+// FIX: description lines were blank because GameModeConfig has no description
+// field yet. This map provides copy until the field is added to the type.
+const MODE_DESC: Record<string, string> = {
+  classic:   'Climb as far as you can. Each floor brings a tougher enemy and a chance to grow your build.',
+  boss_rush: 'Every floor is a boss encounter. Defeat three to earn an upgrade pick and a relic.',
+  one_hp:    'Maximum health is 1. Lifesteal is disabled. Every hit is fatal — build around avoidance.',
+  chaos:     'You start with five random relics from the entire pool. The run begins mid-chaos.',
 };
 
 const MODE_ICON_LABEL: Record<string, string> = {
@@ -120,6 +129,8 @@ class HomeScreen {
     const currencyWrap = el('div', 'hs-currency-wrap');
     this.currencyEl = el('span', 'hs-currency');
     this.currencyEl.textContent = '\u2605 ' + metaService.currency;
+    this.currencyEl.setAttribute('aria-live', 'polite');
+    this.currencyEl.setAttribute('aria-label', 'Currency balance: ' + metaService.currency + ' gold');
     this.deltaEl = el('span', 'hs-currency-delta');
     currencyWrap.append(this.currencyEl, this.deltaEl);
 
@@ -136,7 +147,9 @@ class HomeScreen {
 
   private buildTabNav(): HTMLElement {
     const nav = el('nav', 'hs-tab-nav');
-    // FIX 8: 5 tabs — UPGRADES split out from PLAY
+    nav.setAttribute('role', 'tablist');
+    nav.setAttribute('aria-label', 'Main navigation');
+
     const tabs:   TabId[] = ['play', 'upgrades', 'history', 'profile', 'settings'];
     const labels           = ['PLAY', 'UPGRADES', 'HISTORY', 'PROFILE', 'SETTINGS'];
 
@@ -144,6 +157,10 @@ class HomeScreen {
       const btn = el('button', 'hs-tab-btn');
       btn.textContent    = labels[i];
       btn.dataset['tab'] = id;
+      btn.setAttribute('role', 'tab');
+      btn.setAttribute('aria-selected', 'false');
+      btn.setAttribute('aria-controls', 'tabpanel-' + id);
+      btn.id = 'tab-btn-' + id;
       btn.addEventListener('click', () => this.showTab(id));
       this.tabBtns.set(id, btn);
       nav.appendChild(btn);
@@ -155,14 +172,25 @@ class HomeScreen {
   private buildTabContent(id: TabId, builder: () => HTMLElement): HTMLElement {
     const pane = el('div', 'hs-tab-pane');
     pane.dataset['tab'] = id;
+    pane.setAttribute('role', 'tabpanel');
+    pane.setAttribute('id', 'tabpanel-' + id);
+    pane.setAttribute('aria-labelledby', 'tab-btn-' + id);
     pane.appendChild(builder());
     this.tabs.set(id, pane);
     return pane;
   }
 
   private showTab(id: TabId): void {
-    this.tabs.forEach((pane, key) => pane.classList.toggle('is-active', key === id));
-    this.tabBtns.forEach((btn, key) => btn.classList.toggle('is-active', key === id));
+    this.tabs.forEach((pane, key) => {
+      const active = key === id;
+      pane.classList.toggle('is-active', active);
+      pane.setAttribute('aria-hidden', active ? 'false' : 'true');
+    });
+    this.tabBtns.forEach((btn, key) => {
+      const active = key === id;
+      btn.classList.toggle('is-active', active);
+      btn.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
   }
 
   // ── PLAY tab ───────────────────────────────────────────────────────────────
@@ -267,7 +295,7 @@ class HomeScreen {
 
     // FIX 2: description — what makes this mode different
     const descEl = el('div', 'hs-mode-desc');
-    descEl.textContent = (mode as any).description ?? '';
+    descEl.textContent = MODE_DESC[mode.id] ?? (mode as any).description ?? '';
 
     const bestEl = el('div', 'hs-mode-best');
     bestEl.textContent = bestStr;
@@ -380,7 +408,7 @@ class HomeScreen {
   // FIX 5 + 6: currency chip state and delta flash
   private refreshCurrencyState(): void {
     this.currencyEl.textContent = '\u2605 ' + metaService.currency;
-    // Turn chip green if player can afford at least one upgrade
+    this.currencyEl.setAttribute('aria-label', 'Currency balance: ' + metaService.currency + ' gold');
     const canAffordAny = UPGRADE_INFO.some(info => metaService.canAfford(info.key));
     this.currencyEl.classList.toggle('is-affordable', canAffordAny);
   }

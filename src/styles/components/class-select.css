@@ -100,6 +100,13 @@
   background-color: var(--bg-float);
   border-color:     var(--cls-color, var(--accent-primary));
 }
+/* Keyboard focus — matches hover treatment plus a solid outline */
+.cs-card:focus-visible {
+  outline:          2px solid var(--cls-color, var(--accent-primary));
+  outline-offset:   2px;
+  background-color: var(--bg-float);
+  border-color:     var(--cls-color, var(--accent-primary));
+}
 .cs-card.is-selected {
   transform:        scale(0.95);
   border-color:     var(--cls-color, var(--accent-primary));

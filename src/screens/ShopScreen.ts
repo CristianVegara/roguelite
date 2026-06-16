@@ -83,6 +83,8 @@ class ShopScreen {
       btn.dataset['classId'] = cls.id;
       btn.style.setProperty('--cls-color', intToHex(cls.color));
       btn.textContent = cls.icon + ' ' + cls.name.toUpperCase();
+      btn.setAttribute('aria-pressed', 'false');
+      btn.setAttribute('aria-label', cls.name + ' class');
       btn.addEventListener('click', () => this.selectClass(cls));
       this.classListEl.appendChild(btn);
     });
@@ -126,12 +128,16 @@ class ShopScreen {
 
   private renderClassButtons(): void {
     this.classListEl.querySelectorAll<HTMLButtonElement>('.shop-class-btn').forEach((btn) => {
-      btn.classList.toggle('is-active', btn.dataset['classId'] === this.selectedClass.id);
+      const active = btn.dataset['classId'] === this.selectedClass.id;
+      btn.classList.toggle('is-active', active);
+      btn.setAttribute('aria-pressed', String(active));
     });
   }
 
   private renderSkinList(): void {
     this.skinListEl.innerHTML = '';
+    this.skinListEl.setAttribute('role', 'listbox');
+    this.skinListEl.setAttribute('aria-label', this.selectedClass.name + ' skins');
 
     this.skinListEl.appendChild(this.buildSkinButton({
       kind: 'base', classId: this.selectedClass.id,
@@ -153,6 +159,7 @@ class ShopScreen {
   private buildSkinButton(choice: SkinChoice): HTMLElement {
     const btn = document.createElement('button');
     btn.className = 'shop-skin-btn';
+    btn.setAttribute('role', 'option');
 
     const selected = this.choiceId(choice) === this.choiceId(this.selectedChoice);
     const equipped = this.isChoiceEquipped(choice);
@@ -160,6 +167,11 @@ class ShopScreen {
 
     btn.classList.toggle('is-active',  selected);
     btn.classList.toggle('is-locked', !unlocked);
+    btn.setAttribute('aria-selected', String(selected));
+
+    const skinName  = choice.kind === 'base' ? 'Base skin' : choice.skin.displayName;
+    const skinState = equipped ? 'equipped' : unlocked ? 'unlocked' : 'locked';
+    btn.setAttribute('aria-label', skinName + ', ' + skinState);
 
     const name = el('span', 'shop-skin-name');
     name.textContent = choice.kind === 'base' ? 'BASE' : choice.skin.displayName.toUpperCase();

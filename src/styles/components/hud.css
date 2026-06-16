@@ -135,7 +135,8 @@
   left:             50%;
   transform:        translateX(-50%);
   width:            auto;
-  max-width:        300px;
+  /* FIX: raised from 300px to 360px to accommodate longer modifier descriptions */
+  max-width:        360px;
   height:           auto;
   padding:          2px 10px 2px 8px;
   display:          flex;
@@ -163,6 +164,7 @@
   font-weight:    var(--weight-label);
   letter-spacing: var(--ls-caption);
   white-space:    nowrap;
+  flex-shrink:    0;
 }
 
 .hud-mod-desc {
@@ -172,7 +174,9 @@
   white-space:   nowrap;
   overflow:      hidden;
   text-overflow: ellipsis;
-  max-width:     140px;
+  /* FIX: was 140px — raised to 220px so modifier descriptions
+     like "Enemy heals 15% on each attack" are not cut in half. */
+  max-width:     220px;
 }
 
 /* ── HP panels ───────────────────────────────────────────────────────────── */
@@ -461,6 +465,12 @@
   background:   rgba(65,129,197,0.15);
   border-color: var(--accent-lightning);
   color:        var(--accent-lightning);
+}
+
+/* FIX: Pause button is icon-only — narrower than BUILD/STATS text buttons */
+.hud-action-btn--pause {
+  width:     32px;
+  font-size: var(--text-body);   /* ⏸ glyph needs slightly larger size */
 }
 
 /* Legacy selectors kept for backwards compatibility with HudLeft.ts

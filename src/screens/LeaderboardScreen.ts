@@ -87,6 +87,8 @@ class LeaderboardScreen {
 
   private buildFilterBar(): HTMLElement {
     const bar = el('div', 'lb-filter-bar');
+    bar.setAttribute('role', 'toolbar');
+    bar.setAttribute('aria-label', 'Filter and sort runs');
 
     const modeSelect = this.buildSelect(
       'Mode',
@@ -151,15 +153,26 @@ class LeaderboardScreen {
 
   private buildTable(): HTMLElement {
     const wrap = el('div', 'lb-table-wrap');
+    wrap.setAttribute('role', 'table');
+    wrap.setAttribute('aria-label', 'Run history');
 
-    // FIX: 7 columns instead of 9 — score and time moved to BuildInspector
+    // Header row
+    const hdrGroup = el('div', 'lb-row-group');
+    hdrGroup.setAttribute('role', 'rowgroup');
     const hdr = el('div', 'lb-row lb-row-hdr');
+    hdr.setAttribute('role', 'row');
     ['#', 'DATE', 'CLASS', 'MODE', 'FLOOR', 'BUILD', 'KILLS'].forEach(col => {
-      const c = el('span'); c.textContent = col; hdr.appendChild(c);
+      const c = el('span');
+      c.textContent = col;
+      c.setAttribute('role', 'columnheader');
+      c.setAttribute('aria-sort', col === 'FLOOR' ? 'descending' : 'none');
+      hdr.appendChild(c);
     });
-    wrap.appendChild(hdr);
+    hdrGroup.appendChild(hdr);
+    wrap.appendChild(hdrGroup);
 
     this.tableBody = el('div', 'lb-table-body');
+    this.tableBody.setAttribute('role', 'rowgroup');
     wrap.appendChild(this.tableBody);
 
     return wrap;
@@ -204,6 +217,11 @@ class LeaderboardScreen {
 
     runs.forEach((run, i) => {
       const row = el('div', 'lb-row lb-row-data');
+      row.setAttribute('role', 'row');
+      row.setAttribute('aria-label',
+        'Run ' + (i + 1) + ': ' + humanise(run.class_id) +
+        ', floor ' + run.floor_reached + ', ' + run.build_archetype +
+        '. Click for full details.');
       if (i % 2 === 1) row.classList.add('is-alt');
 
       const modeCfg = MODES_REGISTRY.find(m => m.id === run.mode_id);
@@ -211,15 +229,15 @@ class LeaderboardScreen {
         month: 'short', day: 'numeric',
       });
 
-      // FIX: 7-column layout matches new lb-row grid in leaderboard.css
-      const rank  = el('span', 'lb-rank');   rank.textContent  = String(i + 1);
-      const date  = el('span', 'lb-date');   date.textContent  = dateStr;
-      const cls   = el('span', 'lb-cls');    cls.textContent   = humanise(run.class_id);
+      const rank  = el('span', 'lb-rank');   rank.textContent  = String(i + 1);   rank.setAttribute('role','cell');
+      const date  = el('span', 'lb-date');   date.textContent  = dateStr;          date.setAttribute('role','cell');
+      const cls   = el('span', 'lb-cls');    cls.textContent   = humanise(run.class_id); cls.setAttribute('role','cell');
       const mode  = el('span', 'lb-mode');
       mode.textContent = modeCfg ? modeCfg.icon + ' ' + modeCfg.name : run.mode_id;
-      const floor = el('span', 'lb-floor');  floor.textContent = String(run.floor_reached);
-      const build = el('span', 'lb-build');  build.textContent = run.build_archetype;
-      const kills = el('span', 'lb-kills');  kills.textContent = String(run.kills);
+      mode.setAttribute('role','cell');
+      const floor = el('span', 'lb-floor');  floor.textContent = String(run.floor_reached); floor.setAttribute('role','cell');
+      const build = el('span', 'lb-build');  build.textContent = run.build_archetype;       build.setAttribute('role','cell');
+      const kills = el('span', 'lb-kills');  kills.textContent = String(run.kills);         kills.setAttribute('role','cell');
 
       row.append(rank, date, cls, mode, floor, build, kills);
       row.addEventListener('click', () => openBuildInspector(run));

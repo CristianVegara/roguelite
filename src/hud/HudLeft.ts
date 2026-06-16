@@ -58,12 +58,17 @@ export class HudLeft {
     bar.appendChild(this.classBadge);
 
     const speedWrap = el('div', 'hud-speed-btns');
+    speedWrap.setAttribute('role', 'group');
+    speedWrap.setAttribute('aria-label', 'Game speed');
     const speeds: Array<1 | 1.5 | 2> = [1, 1.5, 2];
-    const labels = ['1x', '1.5x', '2x'];
+    const labels = ['1×', '1.5×', '2×'];
     speeds.forEach((speed, i) => {
       const btn = el('div', 'hud-speed-btn');
       btn.textContent = labels[i];
       btn.dataset['speed'] = String(speed);
+      btn.setAttribute('role', 'button');
+      btn.setAttribute('aria-label', 'Set speed to ' + labels[i]);
+      btn.setAttribute('aria-pressed', speed === 1 ? 'true' : 'false');
       btn.addEventListener('click', () => bus.emit({ type: 'speed:change', payload: { speed } }));
       this.speedBtns.push(btn);
       speedWrap.appendChild(btn);
@@ -84,6 +89,8 @@ export class HudLeft {
     name.style.color = '#4fc3f7';
 
     this.hpValue = el('div', 'hud-hp-value');
+    this.hpValue.setAttribute('aria-live', 'polite');
+    this.hpValue.setAttribute('aria-label', 'Player health');
 
     const track = el('div', 'hud-hp-track');
     this.hpFill  = el('div', 'hud-hp-fill');
@@ -112,6 +119,8 @@ export class HudLeft {
     this.xpLevel.textContent = 'Lv 0';
     this.goldText = el('div', 'hud-gold');
     this.goldText.textContent = '★ 0';
+    this.goldText.setAttribute('aria-live', 'polite');
+    this.goldText.setAttribute('aria-label', 'Gold: 0');
     goldRow.append(this.xpLevel, this.goldText);
 
     this.relicText = el('div', 'hud-relic-text');
@@ -130,6 +139,7 @@ export class HudLeft {
     const pauseBtn = el('button', 'hud-action-btn hud-action-btn--pause');
     pauseBtn.textContent = '\u23f8';
     pauseBtn.title = 'Pause (M)';
+    pauseBtn.setAttribute('aria-label', 'Pause game (M key)');
     pauseBtn.addEventListener('click', () => {
       bus.emit({ type: 'pause:open', payload: {} });
     });
@@ -137,19 +147,25 @@ export class HudLeft {
     this.buildBtn = el('button', 'hud-action-btn');
     this.buildBtn.textContent = 'BUILD';
     this.buildBtn.title = 'Toggle build overview (B)';
+    this.buildBtn.setAttribute('aria-label', 'Toggle build overview (B key)');
+    this.buildBtn.setAttribute('aria-pressed', 'false');
     this.buildBtn.addEventListener('click', () => {
       bus.emit({ type: 'hud:toggle-build', payload: {} });
       this.buildPanelOpen = !this.buildPanelOpen;
       this.buildBtn.classList.toggle('is-active', this.buildPanelOpen);
+      this.buildBtn.setAttribute('aria-pressed', String(this.buildPanelOpen));
     });
 
     this.statsBtn = el('button', 'hud-action-btn');
     this.statsBtn.textContent = 'STATS';
     this.statsBtn.title = 'Toggle stats panel (Tab)';
+    this.statsBtn.setAttribute('aria-label', 'Toggle stats panel (Tab key)');
+    this.statsBtn.setAttribute('aria-pressed', 'false');
     this.statsBtn.addEventListener('click', () => {
       bus.emit({ type: 'hud:toggle-stats', payload: {} });
       this.statsPanelOpen = !this.statsPanelOpen;
       this.statsBtn.classList.toggle('is-active', this.statsPanelOpen);
+      this.statsBtn.setAttribute('aria-pressed', String(this.statsPanelOpen));
     });
 
     kbHints.append(pauseBtn, this.buildBtn, this.statsBtn);
@@ -184,13 +200,16 @@ export class HudLeft {
     this.subs.push(
       runState.subscribe(s => s.gold, (gold) => {
         this.goldText.textContent = `★ ${gold}`;
+        this.goldText.setAttribute('aria-label', 'Gold: ' + gold);
       }),
     );
 
     this.subs.push(
       runState.subscribe(s => s.gameSpeed, (speed) => {
         this.speedBtns.forEach(btn => {
-          btn.classList.toggle('is-active', Number(btn.dataset['speed']) === speed);
+          const active = Number(btn.dataset['speed']) === speed;
+          btn.classList.toggle('is-active', active);
+          btn.setAttribute('aria-pressed', String(active));
         });
       }),
     );

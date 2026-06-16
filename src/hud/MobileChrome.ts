@@ -14,7 +14,9 @@ import { runState } from '../bridge/RunStateStore';
 import { bus }      from '../bridge/GameEventBus';
 import { GAME_WIDTH, GAME_HEIGHT } from '../config/GameConstants';
 
-const MIN_DEAD_ZONE = 40;
+// FIX: lowered from 40 to 20 — phones with 20–35 px of vertical letterbox
+// were getting background bleed without any chrome UI to fill the gap.
+const MIN_DEAD_ZONE = 20;
 
 export class MobileChrome {
   private topBar:    HTMLElement;
@@ -116,6 +118,9 @@ export class MobileChrome {
       const btn = el('div', 'mob-speed-btn');
       btn.textContent      = `${speed}×`;
       btn.dataset['speed'] = String(speed);
+      btn.setAttribute('role', 'button');
+      btn.setAttribute('aria-label', 'Set game speed to ' + speed + '×');
+      btn.setAttribute('aria-pressed', 'false');
       btn.addEventListener('click', () => {
         bus.emit({ type: 'speed:change', payload: { speed } });
       });
@@ -126,6 +131,8 @@ export class MobileChrome {
     const pauseBtn = el('div', 'mob-icon-btn');
     pauseBtn.textContent = '⏸';
     pauseBtn.title = 'Pause';
+    pauseBtn.setAttribute('role', 'button');
+    pauseBtn.setAttribute('aria-label', 'Pause game');
     pauseBtn.addEventListener('click', () => {
       bus.emit({ type: 'pause:open', payload: {} });
     });
@@ -133,18 +140,26 @@ export class MobileChrome {
     // FIX: keep references for is-active toggling
     this.buildBtn = el('div', 'mob-icon-btn');
     this.buildBtn.textContent = 'BUILD';
+    this.buildBtn.setAttribute('role', 'button');
+    this.buildBtn.setAttribute('aria-label', 'Toggle build overview');
+    this.buildBtn.setAttribute('aria-pressed', 'false');
     this.buildBtn.addEventListener('click', () => {
       bus.emit({ type: 'hud:toggle-build', payload: {} });
       this.buildPanelOpen = !this.buildPanelOpen;
       this.buildBtn.classList.toggle('is-active', this.buildPanelOpen);
+      this.buildBtn.setAttribute('aria-pressed', String(this.buildPanelOpen));
     });
 
     this.statsBtn = el('div', 'mob-icon-btn');
     this.statsBtn.textContent = 'STATS';
+    this.statsBtn.setAttribute('role', 'button');
+    this.statsBtn.setAttribute('aria-label', 'Toggle stats panel');
+    this.statsBtn.setAttribute('aria-pressed', 'false');
     this.statsBtn.addEventListener('click', () => {
       bus.emit({ type: 'hud:toggle-stats', payload: {} });
       this.statsPanelOpen = !this.statsPanelOpen;
       this.statsBtn.classList.toggle('is-active', this.statsPanelOpen);
+      this.statsBtn.setAttribute('aria-pressed', String(this.statsPanelOpen));
     });
 
     actionRow.append(pauseBtn, this.buildBtn, this.statsBtn);
@@ -280,7 +295,9 @@ export class MobileChrome {
     this.subs.push(
       runState.subscribe(s => s.gameSpeed, speed => {
         this.bbSpeedBtns.forEach(btn => {
-          btn.classList.toggle('is-active', Number(btn.dataset['speed']) === speed);
+          const active = Number(btn.dataset['speed']) === speed;
+          btn.classList.toggle('is-active', active);
+          btn.setAttribute('aria-pressed', String(active));
         });
       }),
     );
